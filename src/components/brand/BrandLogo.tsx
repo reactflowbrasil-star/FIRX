@@ -17,14 +17,15 @@ export function BrandLogo({
   compact = false,
 }: BrandLogoProps) {
   const { theme } = useTheme();
+  const src = compact ? BRAND.logoIcon : theme === 'light' ? BRAND.logoLight : BRAND.logo;
   const img = (
     <img
-      src={theme === 'light' ? BRAND.logoLight : BRAND.logo}
+      src={src}
       alt={BRAND.name}
       className={cn(
         heightClass,
-        'w-auto object-contain object-left select-none',
-        compact ? 'max-w-[72px]' : 'max-w-full',
+        'w-auto object-contain select-none',
+        compact ? 'max-w-[44px] object-center' : className?.includes('mx-auto') ? 'max-w-full object-center' : 'max-w-full object-left',
         className
       )}
       decoding="async"
@@ -39,4 +40,3 @@ export function BrandLogo({
     </Link>
   );
 }
-

@@ -51,8 +51,8 @@ export function VendedoresChart({ data, loading }: VendedoresChartProps) {
               formatter={(value) => (value === 'recebido' ? 'Recebido' : 'Meta')}
               wrapperStyle={{ color: 'var(--text-secondary)', fontSize: 12 }}
             />
-            <Bar dataKey="recebido" fill="var(--color-sucesso)" radius={[4, 4, 0, 0]} name="recebido" />
-            <Bar dataKey="meta" fill="var(--color-informacao)" radius={[4, 4, 0, 0]} name="meta" />
+            <Bar dataKey="recebido" fill="var(--brand)" radius={[6, 6, 0, 0]} name="recebido" />
+            <Bar dataKey="meta" fill="var(--brand-light)" radius={[6, 6, 0, 0]} name="meta" />
           </BarChart>
         </ResponsiveContainer>
       </div>

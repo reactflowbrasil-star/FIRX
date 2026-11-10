@@ -66,7 +66,7 @@ const shell = (content: string) => `<!doctype html>
       <tr><td align="center" class="email-gutter" style="padding:32px 16px">
         <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
         <table role="presentation" class="email-shell" width="100%" align="center" cellspacing="0" cellpadding="0" border="0" bgcolor="#ffffff" style="width:100%;max-width:600px;margin:0 auto;background-color:#ffffff;border:1px solid #e6e8eb;border-radius:14px;overflow:hidden">
-          <tr><td class="email-gutter" style="padding:24px 32px;border-bottom:3px solid #ff6a00;text-align:center">
+          <tr><td class="email-gutter" style="padding:24px 32px;border-bottom:3px solid #820AD1;text-align:center">
             <a href="{{appUrl}}" style="text-decoration:none"><img class="email-logo" src="{{logoUrl}}" width="260" alt="Agência AFRICA" style="display:block;width:260px;max-width:100%;height:auto;margin:0"></a>
           </td></tr>
           <tr><td class="email-content" style="padding:32px;font-family:Arial,Helvetica,sans-serif;color:#17202a;font-size:15px;line-height:1.6">${content}</td></tr>
@@ -92,8 +92,8 @@ export const DEFAULT_EMAIL_TEMPLATES: Record<EmailTemplateKey, EmailTemplate> = 
     subject: 'Ative seu acesso ao firx',
     html: shell(`<h1 style="font-size:22px;margin:0 0 16px;color:#17202a">Ative seu cadastro</h1>
       <p style="font-size:15px;line-height:1.6;margin:0 0 24px">Olá {{nome}}. Seu acesso de vendedor para {{empresa}} está quase pronto. Confirme seu e-mail e defina sua senha para ativar a conta.</p>
-      <p style="margin:0 0 20px"><a href="{{link}}" style="display:inline-block;background:#ff6a00;color:#fff;text-decoration:none;font-weight:bold;padding:14px 22px;border-radius:8px">Ativar e definir senha</a></p>
-      <p style="font-size:12px;line-height:1.5;color:#68717d;margin:0">Se o botão não abrir, copie este endereço para o navegador:<br><a href="{{link}}" style="color:#c65300;word-break:break-all">{{link}}</a></p>`),
+      <p style="margin:0 0 20px"><a href="{{link}}" style="display:inline-block;background:#820AD1;color:#fff;text-decoration:none;font-weight:bold;padding:14px 22px;border-radius:10px">Ativar e definir senha</a></p>
+      <p style="font-size:12px;line-height:1.5;color:#68717d;margin:0">Se o botão não abrir, copie este endereço para o navegador:<br><a href="{{link}}" style="color:#490B75;word-break:break-all">{{link}}</a></p>`),
   },
   vendor_activation_admin_notice: {
     subject: 'Cadastro de vendedor ativado: {{nome}}',
@@ -107,7 +107,7 @@ export const DEFAULT_EMAIL_TEMPLATES: Record<EmailTemplateKey, EmailTemplate> = 
       <p style="font-size:15px;line-height:1.6;margin:0 0 16px">Olá {{nome}}, você recebeu um documento para revisar e assinar.</p>
       <h2 style="font-size:17px;margin:20px 0 8px">{{titulo}}</h2>
       <div style="font-size:15px;line-height:1.7;white-space:pre-line">{{mensagem}}</div>
-      <p style="margin:24px 0 20px"><a href="{{link}}" style="display:inline-block;background:#ff6a00;color:#fff;text-decoration:none;font-weight:bold;padding:14px 22px;border-radius:8px">Revisar e assinar</a></p>
+      <p style="margin:24px 0 20px"><a href="{{link}}" style="display:inline-block;background:#820AD1;color:#fff;text-decoration:none;font-weight:bold;padding:14px 22px;border-radius:10px">Revisar e assinar</a></p>
       <h2 style="font-size:17px;margin:24px 0 8px">Contrato completo</h2>
       <div style="font-size:12px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;border:1px solid #e6e8eb;border-radius:8px;padding:16px;background:#f8f9fb">{{documento}}</div>
       <p style="font-size:12px;line-height:1.5;color:#68717d;margin:0">Se você não esperava este e-mail, entre em contato com quem enviou o documento.</p>`),
@@ -141,7 +141,7 @@ export function renderEmailHtmlTemplate(value: string, variables: Record<string,
 
   if (existingBrandLogo.test(rendered)) return rendered.replace(existingBrandLogo, logo);
 
-  const header = `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#ffffff" style="width:100%;max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #e6e8eb;border-bottom:3px solid #ff6a00;border-radius:14px 14px 0 0"><tr><td align="center" style="padding:24px 28px"><a href="${appUrl}" style="display:inline-block;text-decoration:none">${logo}</a></td></tr></table>`;
+  const header = `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#ffffff" style="width:100%;max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #e6e8eb;border-bottom:3px solid #820AD1;border-radius:14px 14px 0 0"><tr><td align="center" style="padding:24px 28px"><a href="${appUrl}" style="display:inline-block;text-decoration:none">${logo}</a></td></tr></table>`;
   const bodyTag = /<body\b[^>]*>/i;
   if (bodyTag.test(rendered)) return rendered.replace(bodyTag, (match) => `${match}${header}`);
   return `${header}${rendered}`;

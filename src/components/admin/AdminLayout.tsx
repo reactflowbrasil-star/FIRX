@@ -56,16 +56,16 @@ export function AdminLayout() {
 
   const sidebar = (
     <>
-      <div className="h-24 sm:h-28 px-4 flex items-center border-b border-border-color shrink-0">
+      <div className="h-20 px-5 flex items-center border-b border-border-color shrink-0">
         <Link to="/admin" onClick={closeMenu} className="flex flex-col gap-0.5">
-          <BrandLogo linkTo={false} heightClass="h-14 sm:h-[60px]" className="max-w-[220px]" />
+          <BrandLogo linkTo={false} heightClass="h-11" className="max-w-[180px]" />
           <span className="text-[10px] uppercase tracking-widest text-brand font-semibold">
             Painel Admin
           </span>
         </Link>
       </div>
 
-      <nav aria-label="Navegação administrativa" className="flex-1 p-3 space-y-0.5 overflow-y-auto">
+      <nav aria-label="Navegação administrativa" className="flex-1 p-3 space-y-1 overflow-y-auto">
         {nav.map((item) => (
           <NavLink
             key={item.to}
@@ -74,10 +74,10 @@ export function AdminLayout() {
             onClick={closeMenu}
             className={({ isActive }) =>
               cn(
-                'flex items-center gap-3 px-3 py-3 sm:py-2.5 rounded-xl text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
+                'flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
                 isActive
-                  ? 'bg-brand/15 text-brand'
-                  : 'text-text-secondary hover:bg-bg-tertiary hover:text-text-primary'
+                  ? 'nav-link-active'
+                  : 'text-text-secondary hover:bg-bg-secondary hover:text-text-primary'
               )
             }
           >

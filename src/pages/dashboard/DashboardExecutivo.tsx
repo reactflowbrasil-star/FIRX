@@ -29,8 +29,8 @@ export default function DashboardExecutivo() {
                 <p className="text-xs text-text-secondary font-medium">{k.label}</p>
                 <p className="text-xl font-bold mt-1 tabular-nums">{k.value}</p>
               </div>
-              <div className="w-9 h-9 rounded-lg bg-brand/10 text-brand flex items-center justify-center">
-                <k.icon className="w-4 h-4" />
+              <div className="w-10 h-10 rounded-xl bg-brand-surface text-brand flex items-center justify-center">
+                <k.icon className="w-5 h-5" />
               </div>
             </div>
           </Card>

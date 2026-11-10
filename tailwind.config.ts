@@ -9,29 +9,32 @@ const config: Config = {
       colors: {
         brand: {
           DEFAULT: 'var(--brand)',
+          hover: 'var(--brand-hover)',
           light: 'var(--brand-light)',
           dark: 'var(--brand-dark)',
+          surface: 'var(--brand-surface)',
         },
         grafite: {
           DEFAULT: '#2d2d2d',
           light: '#4a4a4a',
-          dark: '#1a1a1a',
+          dark: '#171321',
         },
         preto: {
-          DEFAULT: '#000000',
+          DEFAULT: '#171321',
         },
         branco: {
           DEFAULT: '#ffffff',
         },
+        /* Aliases legados mapeados para o design system roxo atual */
         verde: {
-          DEFAULT: '#ff6a00',
-          light: '#ff9a52',
-          dark: '#c2410c',
+          DEFAULT: 'var(--brand)',
+          light: 'var(--brand-light)',
+          dark: 'var(--brand-dark)',
         },
         'verde-discreto': {
-          DEFAULT: '#ff6a00',
-          light: '#ff9a52',
-          dark: '#c2410c',
+          DEFAULT: 'var(--brand)',
+          light: 'var(--brand-light)',
+          dark: 'var(--brand-dark)',
         },
         bg: {
           primary: 'var(--bg-primary)',
@@ -55,7 +58,8 @@ const config: Config = {
         informacao: 'var(--color-informacao)',
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
+        display: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
       },
       spacing: {
@@ -71,10 +75,10 @@ const config: Config = {
         '16': '4rem',
       },
       borderRadius: {
-        sm: '0.25rem',
-        md: '0.5rem',
-        lg: '0.75rem',
-        xl: '1rem',
+        sm: '0.5rem',
+        md: '0.75rem',
+        lg: '1rem',
+        xl: '1.25rem',
       },
       boxShadow: {
         sm: 'var(--shadow-sm)',
@@ -84,7 +88,7 @@ const config: Config = {
       },
       transitionDuration: {
         fast: '150ms',
-        normal: '200ms',
+        normal: '220ms',
         slow: '300ms',
       },
     },

@@ -1,4 +1,4 @@
-<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Grafo GrowMoney</title><body><h1>Grafo GrowMoney</h1><p>276 nós · 583 relações</p><pre class="mermaid">flowchart LR
+<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Grafo GrowMoney</title><body><h1>Grafo GrowMoney</h1><p>277 nós · 581 relações</p><pre class="mermaid">flowchart LR
   "file:AGENTS.md"["AGENTS.md"]
   "file:README.md"["README.md"]
   "file:docs/ADMIN_SECURITY.md"["docs/ADMIN_SECURITY.md"]
@@ -11,6 +11,7 @@
   "file:package.json"["package.json"]
   "file:public/assets/pwa-icon.svg"["public/assets/pwa-icon.svg"]
   "file:public/logo-firx-dark.svg"["public/logo-firx-dark.svg"]
+  "file:public/logo-firx-icon.svg"["public/logo-firx-icon.svg"]
   "file:public/logo-firx.svg"["public/logo-firx.svg"]
   "file:public/logo-grow-dark.svg"["public/logo-grow-dark.svg"]
   "file:public/logo-grow.svg"["public/logo-grow.svg"]
@@ -203,7 +204,6 @@
   "file:tailwind.config.ts"["tailwind.config.ts"]
   "file:vite.config.ts"["vite.config.ts"]
   "asset:public/.htaccess"["public/.htaccess"]
-  "asset:public/_redirects"["public/_redirects"]
   "asset:public/api/.htaccess"["public/api/.htaccess"]
   "asset:public/api/marketing-config.example.php"["public/api/marketing-config.example.php"]
   "asset:public/api/marketing-files.php"["public/api/marketing-files.php"]
@@ -212,6 +212,7 @@
   "asset:public/assets/grow-logo-black.png"["public/assets/grow-logo-black.png"]
   "asset:public/assets/logo.png"["public/assets/logo.png"]
   "asset:public/sw.js"["public/sw.js"]
+  "asset:public/_redirects"["public/_redirects"]
   "rpc:is_platform_admin"["is_platform_admin"]
   "table:empresa_members"["empresa_members"]
   "table:profiles"["profiles"]
@@ -542,13 +543,11 @@
   "file:src/pages/auth/Login.tsx" -->|imports| "file:src/components/pwa/InstallPwaButton.tsx"
   "file:src/pages/auth/Login.tsx" -->|imports| "file:src/components/brand/BrandLogo.tsx"
   "file:src/pages/auth/Privacidade.tsx" -->|imports| "file:src/components/ui/index.ts"
-  "file:src/pages/auth/Privacidade.tsx" -->|imports| "file:src/lib/utils.ts"
   "file:src/pages/auth/RecuperacaoSenha.tsx" -->|imports| "file:src/components/ui/Button.tsx"
   "file:src/pages/auth/RecuperacaoSenha.tsx" -->|imports| "file:src/components/ui/Input.tsx"
   "file:src/pages/auth/RecuperacaoSenha.tsx" -->|imports| "file:src/lib/supabase/client.ts"
   "file:src/pages/auth/RecuperaçãoSenha.tsx" -->|imports| "file:src/components/ui/index.ts"
   "file:src/pages/auth/TermosUso.tsx" -->|imports| "file:src/components/ui/index.ts"
-  "file:src/pages/auth/TermosUso.tsx" -->|imports| "file:src/lib/utils.ts"
   "file:src/pages/dashboard/Agenda.tsx" -->|imports| "file:src/components/ui/index.ts"
   "file:src/pages/dashboard/Agenda.tsx" -->|imports| "file:src/lib/supabase/client.ts"
   "file:src/pages/dashboard/Agenda.tsx" -->|imports| "file:src/contexts/AuthContext.tsx"

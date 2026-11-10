@@ -57,18 +57,17 @@ export function DashboardFilters({ onFiltersChange, vendedores }: DashboardFilte
         <div className="flex flex-wrap items-end gap-4">
           <div className="flex flex-col gap-1">
             <span className="text-xs font-medium text-text-secondary">Período</span>
-            <div className="inline-flex rounded-md border border-border-color bg-bg-secondary">
+            <div className="inline-flex rounded-xl border border-border-color bg-bg-secondary p-0.5">
               {periodos.map((p) => (
                 <button
                   key={p.value}
                   type="button"
                   onClick={() => handlePeriodChange(p.value)}
                   className={cn(
-                    'px-3 py-1.5 text-sm font-medium transition-colors',
-                    'first:rounded-l-md last:rounded-r-md',
+                    'px-3.5 py-1.5 text-sm font-medium transition-colors rounded-lg',
                     periodo === p.value
-                      ? 'bg-verde-discreto text-branco'
-                      : 'text-text-secondary hover:bg-bg-tertiary'
+                      ? 'bg-brand text-white shadow-sm'
+                      : 'text-text-secondary hover:bg-bg-primary hover:text-text-primary'
                   )}
                   aria-pressed={periodo === p.value}
                 >
@@ -107,7 +106,7 @@ export function DashboardFilters({ onFiltersChange, vendedores }: DashboardFilte
             <select
               value={vendedorId}
               onChange={(e) => setVendedorId(e.target.value)}
-              className="w-full px-3 py-2 text-sm rounded-md bg-bg-secondary border border-border-color text-text-primary focus:outline-none focus:ring-2 focus:ring-verde-discreto"
+              className="w-full px-3.5 py-2.5 text-sm rounded-xl bg-bg-primary border border-border-color text-text-primary focus:outline-none focus:ring-2 focus:ring-brand/15 focus:border-brand"
               aria-label="Filtrar por vendedor"
             >
               <option value="">Todos os vendedores</option>

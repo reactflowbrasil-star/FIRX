@@ -1,12 +1,12 @@
 import { cn } from '@/lib/utils';
 
 const styles: Record<string, string> = {
-  success: 'bg-brand/15 text-brand-dark',
-  warning: 'bg-aviso/15 text-aviso',
-  danger: 'bg-erro/15 text-erro',
-  info: 'bg-informacao/15 text-informacao',
+  success: 'bg-sucesso/12 text-sucesso',
+  warning: 'bg-aviso/12 text-aviso',
+  danger: 'bg-erro/12 text-erro',
+  info: 'bg-informacao/12 text-informacao',
   neutral: 'bg-bg-tertiary text-text-secondary',
-  brand: 'bg-brand/15 text-brand-dark',
+  brand: 'bg-brand-surface text-brand-dark dark:text-brand-light',
 };
 
 export function Badge({
@@ -30,4 +30,3 @@ export function Badge({
     </span>
   );
 }
-

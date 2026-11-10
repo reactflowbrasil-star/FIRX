@@ -38,10 +38,10 @@ export function ConviteForm({ onSubmit, loading = false, className }: ConviteFor
           value={role}
           onChange={(e) => setRole(e.target.value)}
           className={cn(
-            'w-full px-3 py-2 text-sm rounded-md',
-            'bg-bg-secondary border border-border-color',
+            'field-control w-full px-3.5 py-2.5 text-sm rounded-xl',
+            'bg-bg-primary border border-border-color',
             'text-text-primary',
-            'focus:outline-none focus:ring-2 focus:ring-verde-discreto'
+            'focus:outline-none focus:ring-2 focus:ring-brand/15 focus:border-brand'
           )}
           aria-label="Função do convidado"
         >

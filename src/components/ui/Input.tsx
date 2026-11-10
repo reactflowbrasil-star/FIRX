@@ -18,14 +18,14 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="block text-sm font-medium text-text-secondary mb-1"
+            className="block text-sm font-medium text-text-primary mb-1.5"
           >
             {label}
           </label>
         )}
         <div className="relative">
           {leftIcon && (
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary pointer-events-none">
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-secondary pointer-events-none">
               {leftIcon}
             </span>
           )}
@@ -33,14 +33,15 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             id={inputId}
             className={cn(
-              'field-control w-full px-3 py-2.5 text-sm rounded-xl',
-              'bg-bg-secondary border border-border-color',
+              'field-control w-full px-3.5 py-2.5 text-sm rounded-xl',
+              'bg-bg-primary border border-border-color',
               'text-text-primary placeholder:text-text-secondary',
-              'focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand',
-              'disabled:opacity-50 disabled:cursor-not-allowed',
+              'hover:border-brand/35',
+              'focus:outline-none focus:ring-2 focus:ring-brand/15 focus:border-brand',
+              'disabled:opacity-50 disabled:bg-bg-secondary disabled:cursor-not-allowed',
               leftIcon && 'pl-10',
               rightIcon && 'pr-10',
-              error && 'border-erro focus:ring-erro',
+              error && 'border-erro focus:ring-erro/20 focus:border-erro',
               className
             )}
             aria-invalid={!!error}
@@ -50,18 +51,18 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             {...props}
           />
           {rightIcon && (
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary">
+            <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-secondary">
               {rightIcon}
             </span>
           )}
         </div>
         {error && (
-          <p id={`${inputId}-error`} className="mt-1 text-sm text-erro" role="alert">
+          <p id={`${inputId}-error`} className="mt-1.5 text-xs font-medium text-erro" role="alert">
             {error}
           </p>
         )}
         {hint && !error && (
-          <p id={`${inputId}-hint`} className="mt-1 text-sm text-text-secondary">
+          <p id={`${inputId}-hint`} className="mt-1.5 text-xs text-text-secondary">
             {hint}
           </p>
         )}
@@ -71,4 +72,3 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 );
 
 Input.displayName = 'Input';
-

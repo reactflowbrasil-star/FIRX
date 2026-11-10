@@ -74,12 +74,12 @@ function App() {
         aria-hidden="true"
         className="pointer-events-none fixed inset-0 z-0"
         color="var(--brand)"
-        spacing={32}
-        baseOpacity={0.22}
-        pingEvery={4.5}
-        speed={220}
-        ringWidth={100}
-        amplitude={1.5}
+        spacing={36}
+        baseOpacity={0.06}
+        pingEvery={5.5}
+        speed={200}
+        ringWidth={90}
+        amplitude={0.8}
         interactive={false}
       />
       <div className="relative z-10 min-h-dvh">

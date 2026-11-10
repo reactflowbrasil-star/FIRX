@@ -101,7 +101,7 @@ export function VendedorForm({ initialData, onSubmit, empresaId, isEdit = false,
         </div>
         <div>
           <label htmlFor="role" className="block text-sm font-medium text-text-secondary mb-1">Funcao</label>
-          <select id="role" value={role} onChange={(event) => setRole(event.target.value)} required className="w-full px-3 py-2 text-sm rounded-md bg-bg-secondary border border-border-color text-text-primary focus:outline-none focus:ring-2 focus:ring-verde-discreto disabled:opacity-50 disabled:cursor-not-allowed">
+          <select id="role" value={role} onChange={(event) => setRole(event.target.value)} required className="field-control w-full px-3.5 py-2.5 text-sm rounded-xl bg-bg-primary border border-border-color text-text-primary focus:outline-none focus:ring-2 focus:ring-brand/15 focus:border-brand disabled:opacity-50 disabled:cursor-not-allowed">
             {ROLES.map((opcao) => (
               <option key={opcao.value} value={opcao.value}>
                 {opcao.label}
@@ -111,7 +111,7 @@ export function VendedorForm({ initialData, onSubmit, empresaId, isEdit = false,
         </div>
         <div>
           <label htmlFor="status" className="block text-sm font-medium text-text-secondary mb-1">Status</label>
-          <select id="status" value={status} onChange={(event) => setStatus(event.target.value)} required className="w-full px-3 py-2 text-sm rounded-md bg-bg-secondary border border-border-color text-text-primary focus:outline-none focus:ring-2 focus:ring-verde-discreto disabled:opacity-50 disabled:cursor-not-allowed">
+          <select id="status" value={status} onChange={(event) => setStatus(event.target.value)} required className="field-control w-full px-3.5 py-2.5 text-sm rounded-xl bg-bg-primary border border-border-color text-text-primary focus:outline-none focus:ring-2 focus:ring-brand/15 focus:border-brand disabled:opacity-50 disabled:cursor-not-allowed">
             {STATUS_VENDEDOR.map((opcao) => (
               <option key={opcao.value} value={opcao.value}>
                 {opcao.label}

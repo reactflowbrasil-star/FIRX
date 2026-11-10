@@ -19,7 +19,7 @@ export default function Cadastre() {
     <div className="min-h-screen flex items-center justify-center bg-bg-secondary p-4">
       <Card className="w-full max-w-md p-6">
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-verde-discreto">firx</h1>
+          <h1 className="text-2xl font-bold text-brand">firx</h1>
           <p className="text-text-secondary">Crie sua conta empresarial</p>
         </div>
 
@@ -81,7 +81,7 @@ export default function Cadastre() {
 
         <div className="mt-4 text-center text-sm text-text-secondary">
           Ja tem conta?{' '}
-          <Link to="/auth" className="text-verde-discreto hover:underline">
+          <Link to="/auth" className="text-brand hover:underline">
             Entre aqui
           </Link>
         </div>

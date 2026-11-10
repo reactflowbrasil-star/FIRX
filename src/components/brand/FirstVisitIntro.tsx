@@ -85,11 +85,11 @@ export function FirstVisitIntro() {
           role="img"
           aria-label="Agência AFRICA"
         >
-          <span className="font-sans text-[clamp(2.75rem,10vw,5.5rem)] font-black leading-none tracking-[-0.075em] text-slate-950">
+          <span className="font-sans text-[clamp(2.75rem,10vw,5.5rem)] font-black leading-none tracking-[-0.075em] text-[#171321]">
             AFRICA
           </span>
-          <span className="mt-3 h-1 w-24 rounded-full bg-[#ff6a00]" aria-hidden="true" />
-          <span className="mt-3 font-sans text-sm font-semibold uppercase tracking-[0.42em] text-slate-600 sm:text-base">
+          <span className="mt-3 h-1 w-24 rounded-full bg-[#820AD1]" aria-hidden="true" />
+          <span className="mt-3 font-sans text-sm font-semibold uppercase tracking-[0.42em] text-[#666666] sm:text-base">
             Agência
           </span>
         </div>

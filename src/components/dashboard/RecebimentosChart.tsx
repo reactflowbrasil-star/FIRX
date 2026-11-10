@@ -54,20 +54,20 @@ export function RecebimentosChart({ data, loading }: RecebimentosChartProps) {
             <Line
               type="monotone"
               dataKey="recebido"
-              stroke="var(--color-sucesso)"
-              strokeWidth={2}
-              dot={{ r: 4 }}
+              stroke="var(--brand)"
+              strokeWidth={3}
+              dot={{ r: 3.5, fill: 'var(--brand)', strokeWidth: 0 }}
               activeDot={{ r: 6 }}
               name="recebido"
             />
             <Line
               type="monotone"
               dataKey="previsto"
-              stroke="var(--color-informacao)"
+              stroke="var(--brand-light)"
               strokeWidth={2}
               strokeDasharray="5 5"
-              dot={{ r: 4 }}
-              activeDot={{ r: 6 }}
+              dot={{ r: 3 }}
+              activeDot={{ r: 5 }}
               name="previsto"
             />
           </LineChart>

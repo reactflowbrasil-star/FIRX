@@ -52,15 +52,15 @@ export default function RecuperacaoSenha() {
   };
 
   return <div className="flex min-h-screen items-center justify-center overflow-x-hidden bg-transparent px-4 py-6">
-    <div className="w-full max-w-md rounded-lg border border-border-color bg-bg-secondary p-6 shadow-sm sm:p-8">
+    <div className="w-full max-w-md rounded-2xl border border-border-color bg-bg-primary p-6 shadow-lg sm:p-8">
       <div className="mb-6 text-center"><h1 className="text-2xl font-bold text-text-primary">{vendorActivation ? 'Ative seu cadastro' : resetMode ? 'Definir nova senha' : 'Recuperar senha'}</h1><p className="mt-1 text-sm text-text-secondary">{vendorActivation ? 'Crie uma senha para concluir a ativação da sua conta de vendedor.' : resetMode ? 'Escolha uma senha segura para sua conta.' : 'Enviaremos instruções para seu e-mail.'}</p></div>
       <form className="space-y-4" onSubmit={(event) => void submit(event)}>
         {resetMode ? <><Input label="Nova senha" type="password" value={password} onChange={(e) => setPassword(e.target.value)} leftIcon={<Lock className="h-4 w-4" />} autoComplete="new-password" minLength={8} required /><Input label="Confirme a senha" type="password" value={confirmation} onChange={(e) => setConfirmation(e.target.value)} leftIcon={<Lock className="h-4 w-4" />} autoComplete="new-password" minLength={8} required /></> : <Input label="E-mail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} leftIcon={<Mail className="h-4 w-4" />} autoComplete="email" required />}
         {error && <p className="text-sm text-erro" role="alert">{error}</p>}
-        {notice && <p className="text-sm text-brand" role="status">{notice}</p>}
+        {notice && <p className="text-sm text-brand font-medium" role="status">{notice}</p>}
         <Button type="submit" className="w-full" loading={busy}>{vendorActivation ? 'Definir senha e ativar cadastro' : resetMode ? 'Alterar senha' : 'Enviar instruções'}</Button>
       </form>
-      <p className="mt-6 text-center text-sm text-text-secondary"><Link to="/auth" className="inline-flex items-center gap-1 text-verde-discreto hover:underline"><ArrowLeft className="h-4 w-4" /> Voltar ao login</Link></p>
+      <p className="mt-6 text-center text-sm text-text-secondary"><Link to="/auth" className="inline-flex items-center gap-1 font-medium text-brand hover:text-brand-hover hover:underline"><ArrowLeft className="h-4 w-4" /> Voltar ao login</Link></p>
     </div>
   </div>;
 }

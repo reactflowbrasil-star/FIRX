@@ -50,7 +50,7 @@ export default function Configuracoes() {
       {canManage && <><div><p className="mb-2 text-sm font-medium">Logo</p><FileUpload accept="image/*" categoria="fotos" label="Enviar logo (PNG, SVG, JPG)" onUploaded={(files) => { if (files[0]) { setLogoPath(files[0].caminho); setSaved('Logo enviada. Salve as alterações para vinculá-la à empresa.'); } }} /></div>
       <Button loading={saving} onClick={() => void salvar()}>Salvar alterações</Button></>}
       {error && <p className="text-sm text-erro" role="alert">{error}</p>}
-      {saved && <p className="text-sm text-brand" role="status">{saved}</p>}
+      {saved && <p className="text-sm font-medium text-sucesso" role="status">{saved}</p>}
     </Card>
     <Card className="space-y-2 p-5"><h2 className="font-semibold">Conta</h2><p className="text-sm text-text-secondary">Usuário: {user?.email || '—'}</p><p className="text-sm text-text-secondary">Papel: {empresaAtiva?.role || user?.role || '—'}</p></Card>
   </div>;

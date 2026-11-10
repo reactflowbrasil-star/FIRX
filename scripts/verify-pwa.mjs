@@ -11,7 +11,7 @@ const worker = readFileSync(path.join(dist, 'sw.js'), 'utf8');
 
 assert.equal(manifest.display, 'standalone', 'The app must support standalone installation.');
 assert.equal(manifest.scope, './', 'The manifest scope must remain relative for subfolder hosting.');
-assert.equal(manifest.theme_color, '#ff6a00', 'The PWA color must match the GrowMoney theme.');
+assert.equal(manifest.theme_color, '#820AD1', 'The PWA color must match the firx theme.');
 assert(manifest.icons.some((icon) => icon.sizes === '192x192'), 'A 192px Android icon is required.');
 assert(manifest.icons.some((icon) => icon.sizes === '512x512'), 'A 512px Android icon is required.');
 for (const icon of manifest.icons) {

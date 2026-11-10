@@ -14,7 +14,7 @@ export function LoadingSpinner({ size = 'md', className }: LoadingSpinnerProps) 
 
   return (
     <svg
-      className={cn('animate-spin text-verde-discreto', sizes[size], className)}
+      className={cn('animate-spin text-brand', sizes[size], className)}
       fill="none"
       viewBox="0 0 24 24"
     >
@@ -48,12 +48,12 @@ interface LoadingTableProps {
 
 export function LoadingTable({ rows = 5, cols = 4 }: LoadingTableProps) {
   return (
-    <div className="animate-pulse">
-      <div className="bg-bg-tertiary h-10 rounded-t-md mb-2" />
+    <div className="space-y-2">
+      <div className="skeleton h-10 rounded-xl" />
       {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className="flex gap-4 py-3 px-4 border-b border-border-color">
+        <div key={i} className="flex gap-4 py-3.5 px-4 border-b border-border-color">
           {Array.from({ length: cols }).map((_, j) => (
-            <div key={j} className="h-4 bg-bg-tertiary rounded flex-1" />
+            <div key={j} className="skeleton h-4 flex-1" />
           ))}
         </div>
       ))}

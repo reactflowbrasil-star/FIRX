@@ -28,10 +28,10 @@ export function EmpresaSelector({
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          'w-full flex items-center justify-between px-4 py-2 text-sm',
-          'bg-bg-secondary border border-border-color rounded-md',
-          'text-text-primary hover:bg-bg-tertiary',
-          'focus:outline-none focus:ring-2 focus:ring-verde-discreto'
+          'w-full flex items-center justify-between px-4 py-2.5 text-sm',
+          'bg-bg-primary border border-border-color rounded-xl',
+          'text-text-primary hover:bg-bg-secondary',
+          'focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand'
         )}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
@@ -75,8 +75,8 @@ export function EmpresaSelector({
               setIsOpen(false);
             }}
             className={cn(
-              'w-full text-left px-4 py-2 text-sm',
-              'text-verde-discreto hover:bg-bg-tertiary border-t border-border-color'
+              'w-full text-left px-4 py-2.5 text-sm font-semibold',
+              'text-brand hover:bg-brand-surface/40 border-t border-border-color'
             )}
           >
             + Criar nova empresa

@@ -14,7 +14,7 @@ export function FloatingThemeSwitcher() {
 
   return (
     <div
-      className="fixed right-3 top-1/2 z-[45] flex h-14 w-12 -translate-y-1/2 items-center justify-end"
+      className="fixed right-2 bottom-20 md:bottom-auto md:right-3 md:top-1/2 z-[45] flex h-12 w-11 md:h-14 md:w-12 md:-translate-y-1/2 items-center justify-end"
       role="group"
       aria-label="Seletor de tema"
     >
@@ -31,7 +31,7 @@ export function FloatingThemeSwitcher() {
           aria-pressed={theme === 'light'}
           tabIndex={expanded ? 0 : -1}
           onClick={() => selectTheme('light')}
-          className={`flex h-10 items-center justify-center gap-1 rounded-xl px-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset ${theme === 'light' ? 'bg-brand text-[#1c1008]' : 'text-text-secondary hover:bg-bg-tertiary hover:text-text-primary'}`}
+          className={`flex h-10 items-center justify-center gap-1 rounded-xl px-2.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset ${theme === 'light' ? 'bg-brand text-white' : 'text-text-secondary hover:bg-bg-tertiary hover:text-text-primary'}`}
         >
           <Sun aria-hidden="true" className="size-4 shrink-0" />
           <span>Claro</span>
@@ -42,7 +42,7 @@ export function FloatingThemeSwitcher() {
           aria-pressed={theme === 'dark'}
           tabIndex={expanded ? 0 : -1}
           onClick={() => selectTheme('dark')}
-          className={`flex h-10 items-center justify-center gap-1 rounded-xl px-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset ${theme === 'dark' ? 'bg-brand text-[#1c1008]' : 'text-text-secondary hover:bg-bg-tertiary hover:text-text-primary'}`}
+          className={`flex h-10 items-center justify-center gap-1 rounded-xl px-2.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset ${theme === 'dark' ? 'bg-brand text-white' : 'text-text-secondary hover:bg-bg-tertiary hover:text-text-primary'}`}
         >
           <Moon aria-hidden="true" className="size-4 shrink-0" />
           <span>Escuro</span>

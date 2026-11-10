@@ -38,7 +38,7 @@ export default function Perfil() {
           {avatarPreview ? (
             <img src={avatarPreview} alt="Foto de perfil" className="w-16 h-16 rounded-full object-cover" />
           ) : (
-            <div className="w-16 h-16 rounded-full bg-brand/15 text-brand flex items-center justify-center text-xl font-bold">
+            <div className="w-16 h-16 rounded-full bg-brand-surface text-brand flex items-center justify-center text-xl font-bold">
               {(nome || user?.email || 'U').charAt(0).toUpperCase()}
             </div>
           )}
@@ -64,7 +64,7 @@ export default function Perfil() {
           />
         </div>
         <Button disabled={saving} onClick={() => void salvar()}>{saving ? 'Salvando...' : 'Salvar'}</Button>
-        {msg && <p className={`text-sm ${msg.includes('Falha') || msg.includes('Não foi') ? 'text-erro' : 'text-brand'}`}>{msg}</p>}
+        {msg && <p className={`text-sm font-medium ${msg.includes('Falha') || msg.includes('Não foi') ? 'text-erro' : 'text-sucesso'}`}>{msg}</p>}
       </Card>
     </div>
   );

@@ -89,7 +89,7 @@ export function ClientForm({ initialData, onSubmit, empresaId, isEdit = false, l
         </div>
         <div>
           <label htmlFor="tipo" className="block text-sm font-medium text-text-secondary mb-1">Tipo</label>
-          <select id="tipo" value={tipo} onChange={(event) => setTipo(event.target.value)} required className="w-full px-3 py-2 text-sm rounded-md bg-bg-secondary border border-border-color text-text-primary focus:outline-none focus:ring-2 focus:ring-verde-discreto disabled:opacity-50 disabled:cursor-not-allowed">
+          <select id="tipo" value={tipo} onChange={(event) => setTipo(event.target.value)} required className="field-control w-full px-3.5 py-2.5 text-sm rounded-xl bg-bg-primary border border-border-color text-text-primary focus:outline-none focus:ring-2 focus:ring-brand/15 focus:border-brand disabled:opacity-50 disabled:cursor-not-allowed">
             {TIPOS.map((opcao) => (
               <option key={opcao.value} value={opcao.value}>
                 {opcao.label}
@@ -119,7 +119,7 @@ export function ClientForm({ initialData, onSubmit, empresaId, isEdit = false, l
         </div>
         <div>
           <label htmlFor="status" className="block text-sm font-medium text-text-secondary mb-1">Status</label>
-          <select id="status" value={status} onChange={(event) => setStatus(event.target.value)} required className="w-full px-3 py-2 text-sm rounded-md bg-bg-secondary border border-border-color text-text-primary focus:outline-none focus:ring-2 focus:ring-verde-discreto disabled:opacity-50 disabled:cursor-not-allowed">
+          <select id="status" value={status} onChange={(event) => setStatus(event.target.value)} required className="field-control w-full px-3.5 py-2.5 text-sm rounded-xl bg-bg-primary border border-border-color text-text-primary focus:outline-none focus:ring-2 focus:ring-brand/15 focus:border-brand disabled:opacity-50 disabled:cursor-not-allowed">
             {STATUS_CLIENTE.map((opcao) => (
               <option key={opcao.value} value={opcao.value}>
                 {opcao.label}
@@ -129,7 +129,7 @@ export function ClientForm({ initialData, onSubmit, empresaId, isEdit = false, l
         </div>
         <div className="md:col-span-2">
           <label htmlFor="observacoes" className="block text-sm font-medium text-text-secondary mb-1">Observacoes</label>
-          <textarea id="observacoes" value={formData.observacoes} onChange={(event) => setFormData({ ...formData, observacoes: event.target.value })} rows={3} className="w-full px-3 py-2 text-sm rounded-md bg-bg-secondary border border-border-color text-text-primary focus:outline-none focus:ring-2 focus:ring-verde-discreto disabled:opacity-50 disabled:cursor-not-allowed" />
+          <textarea id="observacoes" value={formData.observacoes} onChange={(event) => setFormData({ ...formData, observacoes: event.target.value })} rows={3} className="w-full px-3.5 py-2.5 text-sm rounded-xl bg-bg-primary border border-border-color text-text-primary focus:outline-none focus:ring-2 focus:ring-brand/15 focus:border-brand disabled:opacity-50 disabled:cursor-not-allowed" />
         </div>
       </div>
       <div className="flex flex-col sm:flex-row sm:justify-end gap-2 pt-4">

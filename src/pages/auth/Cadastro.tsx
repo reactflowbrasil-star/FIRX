@@ -91,9 +91,9 @@ export default function Cadastro() {
 
   return (
     <main className="auth-screen w-full flex items-center justify-center bg-transparent overflow-x-clip px-3 py-[max(.5rem,env(safe-area-inset-top))] pb-[max(.5rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-3">
-      <div className="auth-card w-full max-w-xl bg-bg-primary/90 backdrop-blur-xl border border-border-color rounded-2xl p-3 sm:p-5 shadow-lg">
-        <div className="auth-brand text-center mb-3 space-y-1.5">
-          <BrandLogo linkTo={false} heightClass="h-auto max-h-[min(11svh,68px)]" className="auth-logo mx-auto w-full max-w-[min(100%,250px)]" />
+      <div className="auth-card w-full max-w-xl bg-bg-primary border border-border-color rounded-2xl p-4 sm:p-6 shadow-lg">
+        <div className="auth-brand text-center mb-4 space-y-2">
+          <BrandLogo linkTo={false} heightClass="h-auto max-h-[min(10svh,60px)]" className="auth-logo mx-auto w-auto max-w-[min(100%,210px)]" />
           <h1 className="text-xl font-bold text-text-primary">Criar conta</h1>
           <p className="text-sm text-text-secondary">{perfil ? 'Perfil selecionado' : 'Escolha seu perfil para continuar'} · {BRAND.name}</p>
         </div>
@@ -105,8 +105,8 @@ export default function Cadastro() {
               { id: 'cliente', label: 'Cliente', description: 'Recebi um contrato ou documento para assinar.', icon: UserRound },
               { id: 'vendedor', label: 'Vendedor', description: 'Faço parte da equipe comercial de uma empresa.', icon: BriefcaseBusiness },
             ] as const).map((option) => (
-              <button key={option.id} type="button" onClick={() => setPerfil(option.id)} className="group flex min-h-36 flex-col items-center justify-center gap-2 rounded-2xl border border-border-color bg-bg-secondary/60 p-4 text-center transition-all hover:-translate-y-0.5 hover:border-brand/60 hover:bg-brand/5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
-                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand/10 text-brand group-hover:bg-brand group-hover:text-white"><option.icon className="h-5 w-5" aria-hidden="true" /></span>
+              <button key={option.id} type="button" onClick={() => setPerfil(option.id)} className="group flex min-h-36 flex-col items-center justify-center gap-2 rounded-2xl border border-border-color bg-bg-secondary/50 p-4 text-center transition-all duration-fast hover:-translate-y-0.5 hover:border-brand/40 hover:bg-brand-surface/35 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-surface text-brand transition-colors duration-fast group-hover:bg-brand group-hover:text-white"><option.icon className="h-5 w-5" aria-hidden="true" /></span>
                 <span className="font-semibold text-text-primary">{option.label}</span>
                 <span className="text-xs leading-relaxed text-text-secondary">{option.description}</span>
               </button>

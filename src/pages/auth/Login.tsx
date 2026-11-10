@@ -44,10 +44,10 @@ export default function Login() {
 
   return (
     <main className="auth-screen w-full flex items-center justify-center bg-transparent overflow-x-clip px-3 py-[max(.5rem,env(safe-area-inset-top))] pb-[max(.5rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-3">
-      <Card className="auth-card w-full max-w-md !border-border-color !bg-bg-primary/90 !shadow-lg backdrop-blur-xl p-4 sm:p-6 md:p-7">
-        <div className="auth-brand text-center mb-4 sm:mb-5 space-y-2">
-          <BrandLogo linkTo={false} heightClass="h-auto max-h-[min(14svh,88px)]" className="auth-logo mx-auto w-full max-w-[min(100%,260px)]" />
-          <p className="auth-tagline text-text-secondary text-xs leading-4">{BRAND.tagline}</p>
+      <Card className="auth-card w-full max-w-md !border-border-color !bg-bg-primary !shadow-lg p-5 sm:p-7 md:p-8">
+        <div className="auth-brand text-center mb-5 space-y-2.5">
+          <BrandLogo linkTo={false} heightClass="h-auto max-h-[min(12svh,72px)]" className="auth-logo mx-auto w-auto max-w-[min(100%,220px)]" />
+          <p className="auth-tagline text-text-secondary text-xs leading-5">{BRAND.tagline}</p>
         </div>
 
         <GoogleButton label="Entrar com Google" className="auth-google" />
@@ -102,14 +102,14 @@ export default function Login() {
           </Button>
         </form>
 
-        <div className="auth-footer mt-3 text-center text-sm">
-          <Link to="/recuperar-senha" className="text-verde-discreto hover:underline">
+        <div className="auth-footer mt-4 text-center text-sm">
+          <Link to="/recuperar-senha" className="font-medium text-brand hover:text-brand-hover hover:underline">
             Esqueci minha senha
           </Link>
         </div>
-        <div className="auth-footer mt-1 text-center text-sm text-text-secondary">
+        <div className="auth-footer mt-1.5 text-center text-sm text-text-secondary">
           Não tem conta?{' '}
-          <Link to="/cadastro" className="text-verde-discreto hover:underline">
+          <Link to="/cadastro" className="font-semibold text-brand hover:text-brand-hover hover:underline">
             Cadastre-se
           </Link>
         </div>

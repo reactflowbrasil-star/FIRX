@@ -242,10 +242,10 @@ export function AppLayout() {
           key={liveAlert.id}
           role="alert"
           aria-live="assertive"
-          className="fixed right-4 top-20 z-[80] w-[min(24rem,calc(100vw-2rem))] animate-in rounded-2xl border border-brand/40 bg-bg-primary p-4 shadow-2xl ring-1 ring-brand/20"
+          className="fixed right-4 top-20 z-[80] w-[min(24rem,calc(100vw-2rem))] animate-modal rounded-2xl border border-brand/30 bg-bg-primary p-4 shadow-lg"
         >
           <div className="flex items-start gap-3">
-            <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
+            <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-surface text-brand">
               {soundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
             </span>
             <div className="min-w-0 flex-1">

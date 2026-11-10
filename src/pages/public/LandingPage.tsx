@@ -107,7 +107,7 @@ function ProductPreview() {
   return (
     <div data-float className="relative mx-auto w-full max-w-[34rem] lg:ml-auto" aria-hidden="true">
       <div aria-hidden="true" className="absolute -inset-7 rounded-[2.5rem] bg-brand/10 blur-3xl" />
-      <div className="relative overflow-hidden rounded-[1.75rem] border border-border-color/80 bg-bg-primary/95 p-4 shadow-2xl backdrop-blur-xl sm:p-6">
+      <div className="relative overflow-hidden rounded-[1.75rem] border border-border-color bg-bg-primary p-4 shadow-xl sm:p-6">
         <div className="flex items-center justify-between gap-3 border-b border-border-color pb-4">
           <div className="flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand/12 text-brand">
@@ -284,12 +284,12 @@ export default function LandingPage() {
 
       <main>
         <section id="inicio" className="gradient-hero relative isolate overflow-hidden">
-          <div data-parallax aria-hidden="true" className="pointer-events-none absolute -inset-y-16 -right-16 -z-10 w-[70%] bg-[radial-gradient(ellipse_42%_50%_at_85%_42%,rgba(255,106,0,0.17),transparent_75%)]" />
+          <div data-parallax aria-hidden="true" className="pointer-events-none absolute -inset-y-16 -right-16 -z-10 w-[70%] bg-[radial-gradient(ellipse_42%_50%_at_85%_42%,rgba(130,10,209,0.09),transparent_75%)]" />
           <div aria-hidden="true" className="pointer-events-none absolute right-[8%] top-[14%] -z-10 h-64 w-64 rounded-full border border-brand/10" />
           <div aria-hidden="true" className="pointer-events-none absolute right-[12%] top-[18%] -z-10 h-48 w-48 rounded-full border border-brand/10" />
           <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 pb-20 pt-14 sm:px-6 sm:pb-24 sm:pt-20 lg:grid-cols-[1.02fr_.98fr] lg:gap-10 lg:px-8 lg:py-24">
             <div className="landing-hero-copy mx-auto w-full max-w-2xl text-center lg:mx-0 lg:text-left">
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand/25 bg-brand/10 px-3.5 py-1.5 text-xs font-semibold tracking-wide text-brand-dark dark:text-brand-light">
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-brand-surface px-3.5 py-1.5 text-xs font-semibold tracking-wide text-brand-dark dark:text-brand-light">
                 <Sparkles aria-hidden="true" className="h-3.5 w-3.5" /> GESTÃO COMERCIAL E FINANCEIRA
               </div>
               <h1 className="font-display text-[clamp(2.65rem,7.6vw,5.6rem)] font-light leading-[0.98] tracking-[-0.065em] text-text-primary">
@@ -374,11 +374,11 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="seguranca" className="scroll-mt-24 bg-[#101827] py-16 text-white sm:py-20 lg:py-24">
+        <section id="seguranca" className="scroll-mt-24 bg-[#171321] py-16 text-white sm:py-20 lg:py-24">
           <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-[1fr_1fr] lg:px-8">
-            <div data-reveal><span className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/15 text-brand"><ShieldCheck className="h-6 w-6"/></span><p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-brand-light">Acesso organizado</p><h2 className="max-w-xl text-3xl font-light leading-tight tracking-[-0.045em] sm:text-4xl">Cada pessoa vê o que precisa para trabalhar.</h2><p className="mt-4 max-w-xl text-sm leading-6 text-white/65 sm:text-base">Funções e permissões ajudam a separar a operação da administração. Vendedores têm uma área própria; administradores acompanham os módulos e os registros disponíveis.</p><Link to="/privacidade" className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-brand-light hover:text-white">Conheça a política de privacidade <ArrowUpRight className="h-4 w-4"/></Link></div>
+            <div data-reveal><span className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand text-white"><ShieldCheck className="h-6 w-6"/></span><p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-brand-light">Acesso organizado</p><h2 className="max-w-xl text-3xl font-light leading-tight tracking-[-0.045em] text-white sm:text-4xl">Cada pessoa vê o que precisa para trabalhar.</h2><p className="mt-4 max-w-xl text-sm leading-6 text-white/70 sm:text-base">Funções e permissões ajudam a separar a operação da administração. Vendedores têm uma área própria; administradores acompanham os módulos e os registros disponíveis.</p><Link to="/privacidade" className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-brand-light hover:text-white">Conheça a política de privacidade <ArrowUpRight className="h-4 w-4"/></Link></div>
             <div className="row mx-0 g-3">
-              {[{icon:BadgeCheck,title:'Perfis por função',text:'Acesso alinhado ao papel de cada pessoa.'},{icon:MapPinned,title:'GPS sob permissão',text:'Localização vinculada à rota iniciada pelo vendedor.'},{icon:MessageCircle,title:'Atualizações em tempo real',text:'Visitas e conversas sincronizadas com o sistema.'},{icon:FileArchive,title:'Histórico organizado',text:'Documentos e registros no contexto da operação.'}].map((item) => <div key={item.title} data-reveal className="col-12 col-sm-6"><div className="flex h-full gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4"><item.icon className="mt-0.5 h-5 w-5 shrink-0 text-brand"/><div><h3 className="text-sm font-semibold">{item.title}</h3><p className="mt-1 text-xs leading-5 text-white/60">{item.text}</p></div></div></div>)}
+              {[{icon:BadgeCheck,title:'Perfis por função',text:'Acesso alinhado ao papel de cada pessoa.'},{icon:MapPinned,title:'GPS sob permissão',text:'Localização vinculada à rota iniciada pelo vendedor.'},{icon:MessageCircle,title:'Atualizações em tempo real',text:'Visitas e conversas sincronizadas com o sistema.'},{icon:FileArchive,title:'Histórico organizado',text:'Documentos e registros no contexto da operação.'}].map((item) => <div key={item.title} data-reveal className="col-12 col-sm-6"><div className="flex h-full gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4"><item.icon className="mt-0.5 h-5 w-5 shrink-0 text-brand-light"/><div><h3 className="text-sm font-semibold text-white">{item.title}</h3><p className="mt-1 text-xs leading-5 text-white/65">{item.text}</p></div></div></div>)}
             </div>
           </div>
         </section>
@@ -389,10 +389,10 @@ export default function LandingPage() {
         </section>
 
         <section className="px-4 pb-16 sm:px-6 sm:pb-20 lg:px-8">
-          <div className="relative mx-auto max-w-7xl overflow-hidden rounded-[2rem] border border-brand/20 bg-bg-primary px-6 py-12 text-center shadow-lg sm:px-10 sm:py-16">
-            <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_50%_100%_at_50%_100%,rgba(255,106,0,0.16),transparent_80%)]" />
+          <div className="relative mx-auto max-w-7xl overflow-hidden rounded-[2rem] border border-border-color bg-bg-primary px-6 py-12 text-center shadow-md sm:px-10 sm:py-16">
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_55%_100%_at_50%_100%,rgba(130,10,209,0.08),transparent_80%)]" />
             <div className="relative mx-auto max-w-2xl">
-              <span className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/12 text-brand"><FileText aria-hidden="true" className="h-5 w-5" /></span>
+              <span className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-surface text-brand"><FileText aria-hidden="true" className="h-5 w-5" /></span>
               <h2 className="font-display text-3xl font-light leading-tight tracking-[-0.045em] text-text-primary sm:text-4xl">Pronto para ter <span className="font-bold">mais clareza?</span></h2>
               <p className="mt-3 text-sm leading-6 text-text-secondary sm:text-base sm:leading-7">{BRAND.tagline}</p>
               <Link to="/cadastro" className="mt-7 inline-flex"><Button size="lg" className="gap-2">Começar agora <ArrowRight aria-hidden="true" className="h-4 w-4" /></Button></Link>
