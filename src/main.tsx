@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { AdminAuthProvider } from '@/contexts/AdminAuthContext';
+import { AdminAuthProvider, useAdminAuth } from '@/contexts/AdminAuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { AdminProtectedRoute } from '@/components/admin/AdminProtectedRoute';
@@ -163,8 +163,9 @@ function App() {
 
 function WorkspaceRoleRoute() {
   const { user, isLoading } = useAuth();
-  if (isLoading) return null;
-  if (user?.role === 'vendedor') return <Navigate to="/vendedor" replace />;
+  const { isAdmin, isLoading: adminLoading } = useAdminAuth();
+  if (isLoading || adminLoading) return null;
+  if (!isAdmin && user?.role === 'vendedor') return <Navigate to="/vendedor" replace />;
   return <Outlet />;
 }
 

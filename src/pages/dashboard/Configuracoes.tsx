@@ -52,6 +52,6 @@ export default function Configuracoes() {
       {error && <p className="text-sm text-erro" role="alert">{error}</p>}
       {saved && <p className="text-sm font-medium text-sucesso" role="status">{saved}</p>}
     </Card>
-    <Card className="space-y-2 p-5"><h2 className="font-semibold">Conta</h2><p className="text-sm text-text-secondary">Usuário: {user?.email || '—'}</p><p className="text-sm text-text-secondary">Papel: {empresaAtiva?.role || user?.role || '—'}</p></Card>
+    <Card className="space-y-2 p-5"><h2 className="font-semibold">Conta</h2><p className="text-sm text-text-secondary">Usuário: {user?.email || '—'}</p><p className="text-sm text-text-secondary">Papel: {isAdmin ? 'Administrador geral' : (empresaAtiva?.role || user?.role || '—')}</p></Card>
   </div>;
 }

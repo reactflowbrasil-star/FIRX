@@ -174,15 +174,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }) => {
       await ensureProfileAndEmpresa(session.user);
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .maybeSingle();
-
-      const loadedEmpresas = await loadUserCompanies(session.user.id);
+      const [{ data: profile }, { data: isGlobalAdmin }, loadedEmpresas] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .maybeSingle(),
+        supabase.rpc('is_platform_admin'),
+        loadUserCompanies(session.user.id),
+      ]);
       const savedId = localStorage.getItem('empresaAtiva');
       const activeEmpresa = loadedEmpresas.find((empresa) => empresa.id === savedId) || loadedEmpresas[0] || null;
+      const fallbackRole = isGlobalAdmin === true ? 'admin' : (profile?.role || 'vendedor');
       const sessionUser: UserSession = {
         id: session.user.id,
         email: session.user.email || profile?.email || '',
@@ -191,9 +194,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         avatar: profile?.avatar_url
           ? await criarLinkArquivo(profile.avatar_url, 60 * 60).catch(() => undefined)
           : undefined,
-        // Application permissions follow the active tenant membership. Platform
-        // access remains a separate trusted platform_admins authorization.
-        role: (activeEmpresa?.role || (loadedEmpresas.length > 0 ? profile?.role : null) || 'vendedor') as UserSession['role'],
+        // Application permissions follow the active tenant membership, while a
+        // platform admin defaults to 'admin' instead of falling back to 'vendedor'.
+        role: (activeEmpresa?.role || fallbackRole) as UserSession['role'],
         empresa_id: activeEmpresa?.id || null,
         empresas: loadedEmpresas.map(({ id, nome, role }) => ({ id, nome, role: role || 'vendedor' })),
         token: session.access_token,
@@ -398,7 +401,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } : current);
       } else {
         setEmpresaAtiva(null);
-        setUser((current) => current ? { ...current, role: 'vendedor', empresa_id: null, empresas: [] } : current);
+        setUser((current) => current ? {
+          ...current,
+          role: current.role === 'admin' ? 'admin' : 'vendedor',
+          empresa_id: null,
+          empresas: [],
+        } : current);
       }
     }
   }, [user, empresaAtiva, loadUserCompanies]);
