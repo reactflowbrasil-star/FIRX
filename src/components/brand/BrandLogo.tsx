@@ -35,9 +35,9 @@ export function BrandLogo({
       alt={BRAND.name}
       className={cn(
         heightClass,
-        'block w-auto object-contain select-none transition-opacity duration-fast',
+        'block w-auto shrink-0 object-contain select-none transition-opacity duration-fast',
         compact
-          ? 'max-w-[48px] object-center'
+          ? 'max-w-[52px] object-center'
           : isCentered
             ? 'max-w-full mx-auto object-center'
             : 'max-w-full object-left',
@@ -48,7 +48,7 @@ export function BrandLogo({
   );
 
   if (linkTo === false) {
-    return isCentered ? <div className="flex w-full justify-center">{img}</div> : img;
+    return isCentered ? <div className="flex w-full min-w-0 justify-center">{img}</div> : img;
   }
 
   return (

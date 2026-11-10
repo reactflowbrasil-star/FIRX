@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "generator": "growmoney-project-graph",
-  "generated_at": "2026-11-10T22:54:46.188Z",
+  "generated_at": "2026-11-10T23:20:06.821Z",
   "scope": "src, supabase, docs, public source and static assets, project configuration",
   "nodes": [
     {
@@ -120,9 +120,19 @@
       "label": "src/components/auth/ProtectedRoute.tsx"
     },
     {
+      "id": "file:src/components/brand/BrandLogo.test.tsx",
+      "type": "file",
+      "label": "src/components/brand/BrandLogo.test.tsx"
+    },
+    {
       "id": "file:src/components/brand/BrandLogo.tsx",
       "type": "file",
       "label": "src/components/brand/BrandLogo.tsx"
+    },
+    {
+      "id": "file:src/components/brand/FirstVisitIntro.test.tsx",
+      "type": "file",
+      "label": "src/components/brand/FirstVisitIntro.test.tsx"
     },
     {
       "id": "file:src/components/brand/FirstVisitIntro.tsx",
@@ -303,6 +313,11 @@
       "id": "file:src/contexts/AdminAuthContext.tsx",
       "type": "file",
       "label": "src/contexts/AdminAuthContext.tsx"
+    },
+    {
+      "id": "file:src/contexts/AuthContext.test.tsx",
+      "type": "file",
+      "label": "src/contexts/AuthContext.test.tsx"
     },
     {
       "id": "file:src/contexts/AuthContext.tsx",
@@ -700,6 +715,11 @@
       "label": "src/repositories/servico-repository.ts"
     },
     {
+      "id": "file:src/repositories/servico-vendedor-repository.test.ts",
+      "type": "file",
+      "label": "src/repositories/servico-vendedor-repository.test.ts"
+    },
+    {
       "id": "file:src/repositories/vendedor-repository.ts",
       "type": "file",
       "label": "src/repositories/vendedor-repository.ts"
@@ -783,6 +803,11 @@
       "id": "file:src/services/dashboard-activity-service.ts",
       "type": "file",
       "label": "src/services/dashboard-activity-service.ts"
+    },
+    {
+      "id": "file:src/services/dashboard-overview-service.test.ts",
+      "type": "file",
+      "label": "src/services/dashboard-overview-service.test.ts"
     },
     {
       "id": "file:src/services/dashboard-overview-service.ts",
@@ -1015,6 +1040,11 @@
       "label": "supabase/migrations/20261024180000_marketing_operations.sql"
     },
     {
+      "id": "file:supabase/migrations/20261110231000_fix_gm_contracts_empresa_id_and_backup_restore.sql",
+      "type": "migration",
+      "label": "supabase/migrations/20261110231000_fix_gm_contracts_empresa_id_and_backup_restore.sql"
+    },
+    {
       "id": "file:tailwind.config.ts",
       "type": "file",
       "label": "tailwind.config.ts"
@@ -1125,6 +1155,11 @@
       "label": "profiles"
     },
     {
+      "id": "table:vendedores",
+      "type": "database-table",
+      "label": "vendedores"
+    },
+    {
       "id": "table:empresas",
       "type": "database-table",
       "label": "empresas"
@@ -1165,6 +1200,11 @@
       "label": "empresa_role"
     },
     {
+      "id": "rpc:admin_dashboard_counts",
+      "type": "database-rpc",
+      "label": "admin_dashboard_counts"
+    },
+    {
       "id": "table:agenda",
       "type": "database-table",
       "label": "agenda"
@@ -1173,11 +1213,6 @@
       "id": "table:gm_financial_entries",
       "type": "database-table",
       "label": "gm_financial_entries"
-    },
-    {
-      "id": "table:vendedores",
-      "type": "database-table",
-      "label": "vendedores"
     },
     {
       "id": "table:clients",
@@ -1208,6 +1243,16 @@
       "id": "table:convites",
       "type": "database-table",
       "label": "convites"
+    },
+    {
+      "id": "rpc:create_empresa_with_admin",
+      "type": "database-rpc",
+      "label": "create_empresa_with_admin"
+    },
+    {
+      "id": "rpc:accept_empresa_invite",
+      "type": "database-rpc",
+      "label": "accept_empresa_invite"
     },
     {
       "id": "table:services",
@@ -1499,6 +1544,18 @@
       "confidence": "EXTRACTED"
     },
     {
+      "from": "file:src/components/brand/BrandLogo.test.tsx",
+      "to": "file:src/contexts/ThemeContext.tsx",
+      "type": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "from": "file:src/components/brand/BrandLogo.test.tsx",
+      "to": "file:src/components/brand/BrandLogo.tsx",
+      "type": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
       "from": "file:src/components/brand/BrandLogo.tsx",
       "to": "file:src/lib/utils.ts",
       "type": "imports",
@@ -1513,6 +1570,12 @@
     {
       "from": "file:src/components/brand/BrandLogo.tsx",
       "to": "file:src/contexts/ThemeContext.tsx",
+      "type": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "from": "file:src/components/brand/FirstVisitIntro.test.tsx",
+      "to": "file:src/components/brand/FirstVisitIntro.tsx",
       "type": "imports",
       "confidence": "EXTRACTED"
     },
@@ -1985,6 +2048,12 @@
       "confidence": "EXTRACTED"
     },
     {
+      "from": "file:src/contexts/AuthContext.test.tsx",
+      "to": "file:src/contexts/AuthContext.tsx",
+      "type": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
       "from": "file:src/contexts/AuthContext.tsx",
       "to": "file:src/lib/supabase/client.ts",
       "type": "imports",
@@ -2017,6 +2086,12 @@
     {
       "from": "file:src/contexts/AuthContext.tsx",
       "to": "table:profiles",
+      "type": "reads-or-writes",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "from": "file:src/contexts/AuthContext.tsx",
+      "to": "table:vendedores",
       "type": "reads-or-writes",
       "confidence": "EXTRACTED"
     },
@@ -2130,13 +2205,13 @@
     },
     {
       "from": "file:src/lib/contratos-store.ts",
-      "to": "rpc:is_platform_admin",
+      "to": "rpc:empresa_role",
       "type": "calls-rpc",
       "confidence": "EXTRACTED"
     },
     {
       "from": "file:src/lib/contratos-store.ts",
-      "to": "rpc:empresa_role",
+      "to": "rpc:is_platform_admin",
       "type": "calls-rpc",
       "confidence": "EXTRACTED"
     },
@@ -2233,6 +2308,12 @@
     {
       "from": "file:src/main.tsx",
       "to": "file:src/components/brand/FirstVisitIntro.tsx",
+      "type": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "from": "file:src/main.tsx",
+      "to": "file:src/components/ui/index.ts",
       "type": "imports",
       "confidence": "EXTRACTED"
     },
@@ -2771,6 +2852,18 @@
       "confidence": "EXTRACTED"
     },
     {
+      "from": "file:src/pages/admin/AdminDashboard.tsx",
+      "to": "file:src/lib/supabase/client.ts",
+      "type": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "from": "file:src/pages/admin/AdminDashboard.tsx",
+      "to": "rpc:admin_dashboard_counts",
+      "type": "calls-rpc",
+      "confidence": "EXTRACTED"
+    },
+    {
       "from": "file:src/pages/admin/AdminEmpresas.tsx",
       "to": "file:src/pages/admin/AdminRecursos.tsx",
       "type": "imports",
@@ -2970,6 +3063,12 @@
     },
     {
       "from": "file:src/pages/auth/Cadastro.tsx",
+      "to": "file:src/contexts/AdminAuthContext.tsx",
+      "type": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "from": "file:src/pages/auth/Cadastro.tsx",
       "to": "file:src/lib/brand.ts",
       "type": "imports",
       "confidence": "EXTRACTED"
@@ -2995,6 +3094,12 @@
     {
       "from": "file:src/pages/auth/Login.tsx",
       "to": "file:src/contexts/AuthContext.tsx",
+      "type": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "from": "file:src/pages/auth/Login.tsx",
+      "to": "file:src/contexts/AdminAuthContext.tsx",
       "type": "imports",
       "confidence": "EXTRACTED"
     },
@@ -3029,6 +3134,18 @@
       "confidence": "EXTRACTED"
     },
     {
+      "from": "file:src/pages/auth/Privacidade.tsx",
+      "to": "file:src/components/brand/BrandLogo.tsx",
+      "type": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "from": "file:src/pages/auth/Privacidade.tsx",
+      "to": "file:src/lib/brand.ts",
+      "type": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
       "from": "file:src/pages/auth/RecuperacaoSenha.tsx",
       "to": "file:src/components/ui/Button.tsx",
       "type": "imports",
@@ -3037,6 +3154,12 @@
     {
       "from": "file:src/pages/auth/RecuperacaoSenha.tsx",
       "to": "file:src/components/ui/Input.tsx",
+      "type": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "from": "file:src/pages/auth/RecuperacaoSenha.tsx",
+      "to": "file:src/components/brand/BrandLogo.tsx",
       "type": "imports",
       "confidence": "EXTRACTED"
     },
@@ -3055,6 +3178,18 @@
     {
       "from": "file:src/pages/auth/TermosUso.tsx",
       "to": "file:src/components/ui/index.ts",
+      "type": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "from": "file:src/pages/auth/TermosUso.tsx",
+      "to": "file:src/components/brand/BrandLogo.tsx",
+      "type": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "from": "file:src/pages/auth/TermosUso.tsx",
+      "to": "file:src/lib/brand.ts",
       "type": "imports",
       "confidence": "EXTRACTED"
     },
@@ -3887,6 +4022,18 @@
       "confidence": "EXTRACTED"
     },
     {
+      "from": "file:src/repositories/empresa-repository.ts",
+      "to": "rpc:create_empresa_with_admin",
+      "type": "calls-rpc",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "from": "file:src/repositories/empresa-repository.ts",
+      "to": "rpc:accept_empresa_invite",
+      "type": "calls-rpc",
+      "confidence": "EXTRACTED"
+    },
+    {
       "from": "file:src/repositories/servico-repository.ts",
       "to": "file:src/lib/supabase/client.ts",
       "type": "imports",
@@ -3908,6 +4055,30 @@
       "from": "file:src/repositories/servico-repository.ts",
       "to": "table:services",
       "type": "reads-or-writes",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "from": "file:src/repositories/servico-vendedor-repository.test.ts",
+      "to": "file:src/repositories/servico-repository.ts",
+      "type": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "from": "file:src/repositories/servico-vendedor-repository.test.ts",
+      "to": "file:src/repositories/vendedor-repository.ts",
+      "type": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "from": "file:src/repositories/servico-vendedor-repository.test.ts",
+      "to": "file:src/repositories/agenda-repository.ts",
+      "type": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "from": "file:src/repositories/servico-vendedor-repository.test.ts",
+      "to": "file:src/repositories/empresa-repository.ts",
+      "type": "imports",
       "confidence": "EXTRACTED"
     },
     {
@@ -4045,6 +4216,12 @@
     {
       "from": "file:src/services/admin-resource-service.ts",
       "to": "rpc:admin_log_event",
+      "type": "calls-rpc",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "from": "file:src/services/admin-resource-service.ts",
+      "to": "rpc:create_empresa_with_admin",
       "type": "calls-rpc",
       "confidence": "EXTRACTED"
     },
@@ -4193,6 +4370,12 @@
       "confidence": "EXTRACTED"
     },
     {
+      "from": "file:src/services/dashboard-overview-service.test.ts",
+      "to": "file:src/services/dashboard-overview-service.ts",
+      "type": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
       "from": "file:src/services/dashboard-overview-service.ts",
       "to": "file:src/lib/supabase/client.ts",
       "type": "imports",
@@ -4207,6 +4390,12 @@
     {
       "from": "file:src/services/dashboard-overview-service.ts",
       "to": "table:contratos",
+      "type": "reads-or-writes",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "from": "file:src/services/dashboard-overview-service.ts",
+      "to": "table:gm_contracts",
       "type": "reads-or-writes",
       "confidence": "EXTRACTED"
     },

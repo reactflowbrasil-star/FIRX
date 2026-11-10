@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button, Input, Card } from '@/components/ui';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { BRAND } from '@/lib/brand';
 import { GoogleButton } from '@/components/auth/GoogleButton';
 import { InstallPwaButton } from '@/components/pwa/InstallPwaButton';
@@ -14,7 +15,8 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const { login, isAuthenticated, isLoading } = useAuth();
+  const { login, user, empresas, isMarketingMember, isAuthenticated, isLoading } = useAuth();
+  const { isAdmin, isLoading: adminLoading } = useAdminAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -23,18 +25,24 @@ export default function Login() {
   }, []);
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      navigate('/dashboard', { replace: true });
+    if (isLoading || adminLoading || !isAuthenticated) return;
+    if (!isAdmin && user?.role === 'vendedor') {
+      navigate('/vendedor', { replace: true });
+      return;
     }
-  }, [isAuthenticated, isLoading, navigate]);
+    if (!isAdmin && isMarketingMember && empresas.length === 0) {
+      navigate('/marketing', { replace: true });
+      return;
+    }
+    navigate('/dashboard', { replace: true });
+  }, [isAuthenticated, isLoading, adminLoading, isAdmin, user?.role, isMarketingMember, empresas.length, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      await login(email, password);
-      navigate('/dashboard');
+      await login(email.trim(), password);
     } catch (err: any) {
       setError(err?.message || 'Erro ao entrar. Verifique e-mail e senha.');
     } finally {
@@ -83,8 +91,8 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="focus:outline-none"
-                tabIndex={-1}
+                aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                className="rounded-md p-0.5 text-text-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>

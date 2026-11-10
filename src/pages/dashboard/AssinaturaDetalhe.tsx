@@ -30,6 +30,7 @@ export default function AssinaturaDetalhe() {
   const [arquivoUrl, setArquivoUrl] = useState('');
   const [copied, setCopied] = useState('');
   const [loadError, setLoadError] = useState('');
+  const [actionError, setActionError] = useState('');
   const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {
@@ -50,8 +51,15 @@ export default function AssinaturaDetalhe() {
   }, [reload]);
 
   useEffect(() => {
-    if (!env?.arquivoStoragePath) return;
-    void criarLinkArquivo(env.arquivoStoragePath).then(setArquivoUrl).catch((error) => console.warn(error));
+    if (!env?.arquivoStoragePath) {
+      setArquivoUrl('');
+      return;
+    }
+    let active = true;
+    void criarLinkArquivo(env.arquivoStoragePath)
+      .then((url) => { if (active) setArquivoUrl(url); })
+      .catch((error) => console.warn(error));
+    return () => { active = false; };
   }, [env?.arquivoStoragePath]);
 
   if (!env) {
@@ -68,12 +76,13 @@ export default function AssinaturaDetalhe() {
   const st = statusMap[env.status];
 
   const copy = async (token: string) => {
+    setActionError('');
     try {
       await copySigningLink(token);
       setCopied(token);
       setTimeout(() => setCopied(''), 2000);
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Não foi possível copiar o link.');
+      setActionError(error instanceof Error ? error.message : 'Não foi possível copiar o link.');
     }
   };
 
@@ -94,7 +103,10 @@ export default function AssinaturaDetalhe() {
                 size="sm"
                 leftIcon={<Send className="w-4 h-4" />}
                 onClick={() => {
-                  void sendEnvelope(env.id, user?.email || 'sistema').then(reload).catch((error) => window.alert(error.message));
+                  setActionError('');
+                  void sendEnvelope(env.id, user?.email || 'sistema')
+                    .then(reload)
+                    .catch((error) => setActionError(error instanceof Error ? error.message : 'Não foi possível enviar os convites.'));
                 }}
               >
                 Enviar convites por e-mail
@@ -106,7 +118,10 @@ export default function AssinaturaDetalhe() {
                 variant="outline"
                 leftIcon={<Ban className="w-4 h-4" />}
                 onClick={() => {
-                  void cancelEnvelope(env.id, user?.email || 'sistema').then(reload).catch((error) => window.alert(error.message));
+                  setActionError('');
+                  void cancelEnvelope(env.id, user?.email || 'sistema')
+                    .then(reload)
+                    .catch((error) => setActionError(error instanceof Error ? error.message : 'Não foi possível cancelar o envelope.'));
                 }}
               >
                 Cancelar
@@ -115,6 +130,8 @@ export default function AssinaturaDetalhe() {
           </>
         }
       />
+
+      {actionError && <p className="rounded-xl border border-erro/30 bg-erro/10 px-4 py-3 text-sm text-erro" role="alert">{actionError}</p>}
 
       {(env.status === 'enviado' || env.status === 'parcial') && (
         <p className="rounded-xl border border-brand/20 bg-brand/5 px-4 py-3 text-sm text-text-secondary">

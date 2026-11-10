@@ -2,34 +2,43 @@ import { supabase } from '@/lib/supabase/client';
 import type { CreateEmpresaData, Empresa, EmpresaMember, Convite, CreateConviteData } from '@/lib/empresa-types';
 
 export class EmpresaRepository {
-  static async create(data: CreateEmpresaData, userId: string): Promise<Empresa> {
-    const { data: empresa, error } = await supabase
-      .from('empresas')
-      .insert({
-        ...data,
-        responsavel_id: userId,
-        configuracoes: {},
-        criado_em: new Date().toISOString(),
-      })
-      .select()
-      .single();
-
-    if (error) throw new Error(`Falha ao criar empresa: ${error.message}`);
-    
-    const { error: memberError } = await supabase
-      .from('empresa_members')
-      .insert({
-        empresa_id: empresa.id,
-        usuario_id: userId,
-        role: 'admin',
-        status: 'aceito',
-        aceito_em: new Date().toISOString(),
-      });
-
-    if (memberError) {
-      throw new Error(`Empresa criada, mas falha ao vincular o responsável: ${memberError.message}`);
+  static async create(data: CreateEmpresaData, _userId: string): Promise<Empresa> {
+    const { data: empresaId, error: rpcError } = await supabase.rpc('create_empresa_with_admin', {
+      p_nome: data.nome,
+      p_cnpj: data.cnpj || null,
+    });
+    if (rpcError || !empresaId) {
+      throw new Error(`Falha ao criar empresa: ${rpcError?.message || 'ID da empresa não retornado'}`);
     }
 
+    const extraFields: Record<string, unknown> = {};
+    if (data.razao_social !== undefined) extraFields.razao_social = data.razao_social || null;
+    if (data.nome_fantasia !== undefined) extraFields.nome_fantasia = data.nome_fantasia || null;
+    if (data.email !== undefined) extraFields.email = data.email || null;
+    if (data.telefone !== undefined) extraFields.telefone = data.telefone || null;
+    if (data.endereco !== undefined) extraFields.endereco = data.endereco;
+
+    if (Object.keys(extraFields).length > 0) {
+      const { data: updated, error: updateError } = await supabase
+        .from('empresas')
+        .update({ ...extraFields, atualizado_em: new Date().toISOString() })
+        .eq('id', empresaId)
+        .select('*')
+        .single();
+      if (updateError) {
+        throw new Error(`Empresa criada, mas falha ao salvar dados cadastrais: ${updateError.message}`);
+      }
+      return updated as unknown as Empresa;
+    }
+
+    const { data: empresa, error: fetchError } = await supabase
+      .from('empresas')
+      .select('*')
+      .eq('id', empresaId)
+      .single();
+    if (fetchError || !empresa) {
+      throw new Error(`Empresa criada, mas falha ao carregar os dados: ${fetchError?.message || 'não encontrada'}`);
+    }
     return empresa as unknown as Empresa;
   }
 
@@ -135,33 +144,23 @@ export class EmpresaRepository {
   }
 
   static async acceptConvite(token: string, userId: string): Promise<EmpresaMember> {
-    const { data: convite, error: conviteError } = await supabase
-      .from('convites')
-      .select('*')
-      .eq('token', token)
-      .eq('status', 'pendente')
-      .single();
-
-    if (conviteError || !convite) throw new Error('Convite inválido ou expirado');
+    const { data: memberId, error: rpcError } = await supabase.rpc('accept_empresa_invite', {
+      p_token: token,
+    });
+    if (rpcError || !memberId) {
+      throw new Error(`Falha ao aceitar convite: ${rpcError?.message || 'Convite inválido ou expirado'}`);
+    }
 
     const { data: member, error: memberError } = await supabase
       .from('empresa_members')
-      .insert({
-        empresa_id: convite.empresa_id,
-        usuario_id: userId,
-        role: convite.role,
-        status: 'aceito',
-        aceito_em: new Date().toISOString(),
-      })
-      .select()
+      .select('*')
+      .eq('id', memberId)
+      .eq('usuario_id', userId)
       .single();
 
-    if (memberError) throw new Error(`Falha ao aceitar convite: ${memberError.message}`);
-
-    await supabase
-      .from('convites')
-      .update({ status: 'aceito' })
-      .eq('id', convite.id);
+    if (memberError || !member) {
+      throw new Error(`Convite aceito, mas falha ao carregar vínculo: ${memberError?.message || 'não encontrado'}`);
+    }
 
     return member as unknown as EmpresaMember;
   }

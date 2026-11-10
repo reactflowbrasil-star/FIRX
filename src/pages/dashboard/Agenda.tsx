@@ -37,8 +37,9 @@ export default function Agenda() {
   const salvar = async () => {
     if (!empresaAtiva?.id || !user?.id) { setError('Selecione uma empresa para agendar compromissos.'); return; }
     if (!form.title.trim() || !form.date) { setError('Informe o título e a data do compromisso.'); return; }
-    setSaving(true); setError('');
     const dateTime = new Date(`${form.date}T${form.time || '09:00'}`);
+    if (Number.isNaN(dateTime.getTime())) { setError('Informe uma data e hora válidas.'); return; }
+    setSaving(true); setError('');
     const { error: saveError } = await supabase.from('agenda').insert({
       empresa_id: empresaAtiva.id,
       responsavel_id: user.id,

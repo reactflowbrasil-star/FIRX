@@ -17,7 +17,7 @@ export class VendedorRepository {
       .from('vendedores')
       .insert({
         ...data,
-        criado_por: userId,
+        atualizado_por: userId,
         criado_em: new Date().toISOString(),
         atualizado_em: new Date().toISOString(),
       })
@@ -62,8 +62,9 @@ export class VendedorRepository {
     if (filtros.status) query = query.eq('status', filtros.status);
     if (filtros.role) query = query.eq('role', filtros.role);
 
-    if (filtros.busca) {
-      query = query.or(`nome.ilike.%${filtros.busca}%,email.ilike.%${filtros.busca}%,identificador_interno.ilike.%${filtros.busca}%`);
+    if (filtros.busca?.trim()) {
+      const busca = filtros.busca.trim().replace(/[%,()]/g, ' ').replace(/\s+/g, ' ');
+      query = query.or(`nome.ilike.%${busca}%,email.ilike.%${busca}%,identificador_interno.ilike.%${busca}%`);
     }
 
     query = query.order('nome', { ascending: true });
@@ -134,13 +135,13 @@ export class VendedorRepository {
     };
   }
 
-  static async getComissoes(vendedorId: string, empresaId: string, periodo: string): Promise<any[]> {
+  static async getComissoes(vendedorId: string, empresaId: string, _periodo?: string): Promise<any[]> {
     const { data, error } = await supabase
       .from('comissoes')
       .select('*')
       .eq('vendedor_id', vendedorId)
       .eq('empresa_id', empresaId)
-      .eq('periodo', periodo);
+      .eq('ativo', true);
 
     if (error) throw new Error(`Falha ao buscar comissoes: ${error.message}`);
     return (data as unknown as any[]) || [];

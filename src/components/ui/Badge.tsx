@@ -6,7 +6,7 @@ const styles: Record<string, string> = {
   danger: 'bg-erro/12 text-erro',
   info: 'bg-informacao/12 text-informacao',
   neutral: 'bg-bg-tertiary text-text-secondary',
-  brand: 'bg-brand-surface text-brand-dark dark:text-brand-light',
+  brand: 'bg-brand-surface text-brand',
 };
 
 export function Badge({

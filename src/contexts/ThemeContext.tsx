@@ -16,20 +16,29 @@ export function useTheme() {
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     if (typeof window === 'undefined') return 'light';
-    const saved = window.localStorage.getItem('theme');
-    return saved === 'dark' || saved === 'light' ? saved : 'light';
+    try {
+      const saved = window.localStorage.getItem('theme');
+      return saved === 'dark' || saved === 'light' ? saved : 'light';
+    } catch {
+      return 'light';
+    }
   });
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('theme', theme);
+    document.documentElement.style.colorScheme = theme;
+    try {
+      window.localStorage.setItem('theme', theme);
+    } catch {
+      // Ignore storage restrictions.
+    }
   }, [theme]);
 
   const toggleTheme = () => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
-      <div className="min-h-screen bg-transparent">
+      <div className="flex min-h-dvh flex-col bg-transparent">
         {children}
       </div>
     </ThemeContext.Provider>

@@ -49,7 +49,9 @@ export default function VendedorWorkspace() {
     if (!user?.id) { setVisits([]); setAppointments([]); setContracts([]); setLoading(false); return; }
     setLoading(true);
     try {
-      const { data, error: lookupError } = await supabase.from('vendedores').select('id').eq('usuario_id', user.id).eq('status', 'ativo').maybeSingle();
+      let sellerQuery = supabase.from('vendedores').select('id').eq('usuario_id', user.id).eq('status', 'ativo');
+      if (user.empresa_id) sellerQuery = sellerQuery.eq('empresa_id', user.empresa_id);
+      const { data, error: lookupError } = await sellerQuery.limit(1).maybeSingle();
       if (lookupError) throw lookupError;
       if (!data?.id) { setSellerId(null); setVisits([]); setAppointments([]); setContracts([]); setError('Seu usuário ainda não está vinculado a um cadastro ativo de vendedor. Fale com o administrador.'); return; }
       setSellerId(data.id);
@@ -122,8 +124,9 @@ export default function VendedorWorkspace() {
 
   const saveAppointment = async () => {
     if (!user?.id || !user.empresa_id || !appointmentForm.title.trim() || !appointmentForm.date) { setError('Informe empresa, título e data do compromisso.'); return; }
-    setSavingAppointment(true); setError('');
     const start = new Date(`${appointmentForm.date}T${appointmentForm.time || '09:00'}`);
+    if (Number.isNaN(start.getTime())) { setError('Informe uma data e hora válidas.'); return; }
+    setSavingAppointment(true); setError('');
     const { error: saveError } = await supabase.from('agenda').insert({ empresa_id: user.empresa_id, responsavel_id: user.id, criado_por: user.id, title: appointmentForm.title.trim(), tipo: appointmentForm.tipo, data_hora: start.toISOString(), data_fim: new Date(start.getTime() + 60 * 60 * 1000).toISOString(), duracao_minutos: 60 });
     setSavingAppointment(false);
     if (saveError) { setError(`Não foi possível salvar o compromisso: ${saveError.message}`); return; }

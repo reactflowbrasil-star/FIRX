@@ -63,9 +63,10 @@ type BrasilApiCliente = {
 };
 
 export default function Clientes() {
-  const { user, empresaAtiva } = useAuth();
+  const { user, empresaAtiva, hasPermission } = useAuth();
   const { isAdmin: isPlatformAdmin } = useAdminAuth();
   const canManage = isPlatformAdmin || empresaAtiva?.role === 'admin';
+  const canWrite = isPlatformAdmin || hasPermission('clients:write');
   const [rows, setRows] = useState<Cliente[]>([]);
   const [busca, setBusca] = useState('');
   const [open, setOpen] = useState(false);
@@ -174,7 +175,11 @@ export default function Clientes() {
 
   const role = empresaAtiva?.role || user?.role || '';
   const loadClients = useCallback(async () => {
-    if (!empresaAtiva?.id || !role) return;
+    if (!empresaAtiva?.id || !role) {
+      setRows([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError('');
     try {
@@ -238,7 +243,10 @@ export default function Clientes() {
 
   const salvar = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!user?.id || !empresaAtiva?.id || !role) return;
+    if (!user?.id || !empresaAtiva?.id || !role) {
+      setError('Selecione uma empresa antes de salvar o cliente.');
+      return;
+    }
     if (!form.tipo) {
       setError('Selecione CPF ou CNPJ antes de preencher os dados do cliente.');
       return;
@@ -305,7 +313,7 @@ export default function Clientes() {
         <>
           <Button variant="outline" size="sm" leftIcon={<Download className="w-4 h-4" />} onClick={() => exportCsv('clientes', filtered.map((r) => ({ Nome: r.nome, Documento: r.documento, Email: r.email || '', Tipo: tipoLabel(r.tipo), Status: r.status })))}>CSV</Button>
           <Button variant="outline" size="sm" leftIcon={<FileText className="w-4 h-4" />} onClick={() => exportPdf('Clientes', `<table><thead><tr><th>Nome</th><th>Documento</th><th>E-mail</th><th>Tipo</th></tr></thead><tbody>${filtered.map((r) => `<tr><td>${escapeHtml(r.nome)}</td><td>${escapeHtml(r.documento)}</td><td>${escapeHtml(r.email || '')}</td><td>${tipoLabel(r.tipo)}</td></tr>`).join('')}</tbody></table>`)}>PDF</Button>
-          <Button size="sm" leftIcon={<Plus className="w-4 h-4" />} onClick={abrirNovo}>Novo</Button>
+          {canWrite && <Button size="sm" leftIcon={<Plus className="w-4 h-4" />} onClick={abrirNovo}>Novo</Button>}
         </>
       } />
       {error && !open && <div role="alert" className="rounded-lg border border-erro/30 bg-erro/10 px-4 py-3 text-sm text-erro">{error}</div>}

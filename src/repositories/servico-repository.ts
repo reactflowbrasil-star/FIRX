@@ -12,12 +12,11 @@ interface FiltrosEmpresa {
 }
 
 export class ServicoRepository {
-  static async create(data: CreateServicoData, userId: string): Promise<Servico> {
+  static async create(data: CreateServicoData, _userId: string): Promise<Servico> {
     const { data: servico, error } = await supabase
       .from('services')
       .insert({
         ...data,
-        criado_por: userId,
         criado_em: new Date().toISOString(),
         atualizado_em: new Date().toISOString(),
       })
@@ -62,8 +61,9 @@ export class ServicoRepository {
     if (filtros.status) query = query.eq('status', filtros.status);
     if (filtros.categoria) query = query.eq('categoria', filtros.categoria);
 
-    if (filtros.busca) {
-      query = query.or(`nome.ilike.%${filtros.busca}%,codigo.ilike.%${filtros.busca}%,categoria.ilike.%${filtros.busca}%`);
+    if (filtros.busca?.trim()) {
+      const busca = filtros.busca.trim().replace(/[%,()]/g, ' ').replace(/\s+/g, ' ');
+      query = query.or(`nome.ilike.%${busca}%,codigo.ilike.%${busca}%,categoria.ilike.%${busca}%`);
     }
 
     query = query.order('nome', { ascending: true });

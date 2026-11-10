@@ -58,7 +58,8 @@ const EXCLUSIONS = [
   'Envelopes de assinatura e tokens privados de acesso',
 ];
 const SENSITIVE_KEY = /(token|secret|password|passwd|credential|authorization|api.?key|private.?key)/i;
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UNSAFE_OBJECT_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const REQUIRED_FIELDS: Partial<Record<SystemBackupDataset, string[]>> = {
   empresas: ['nome'],
   clients: ['empresa_id', 'nome', 'documento'],
@@ -89,6 +90,7 @@ function sanitizeSecrets(value: unknown, path: string, redactions: Set<string>):
 
   const safe: Record<string, unknown> = {};
   for (const [key, nestedValue] of Object.entries(value)) {
+    if (UNSAFE_OBJECT_KEYS.has(key)) continue;
     const nestedPath = `${path}.${key}`;
     if (SENSITIVE_KEY.test(key)) {
       redactions.add(nestedPath.replace(/\[\d+\]/g, '[*]'));
@@ -97,6 +99,64 @@ function sanitizeSecrets(value: unknown, path: string, redactions: Set<string>):
     safe[key] = sanitizeSecrets(nestedValue, nestedPath, redactions);
   }
   return safe;
+}
+
+function cloneSafeValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(cloneSafeValue);
+  if (!isPlainObject(value)) return value;
+  const clean: Record<string, unknown> = {};
+  for (const [key, nestedValue] of Object.entries(value)) {
+    if (UNSAFE_OBJECT_KEYS.has(key) || SENSITIVE_KEY.test(key) || nestedValue === undefined) continue;
+    clean[key] = cloneSafeValue(nestedValue);
+  }
+  return clean;
+}
+
+function cloneSafeDatasets(datasets: Record<string, unknown>): Record<SystemBackupDataset, Record<string, unknown>[]> {
+  const clean = {} as Record<SystemBackupDataset, Record<string, unknown>[]>;
+  for (const table of SYSTEM_BACKUP_DATASETS) {
+    const rows = Array.isArray(datasets[table]) ? datasets[table] : [];
+    clean[table] = rows.filter(isPlainObject).map((row) => cloneSafeValue(row) as Record<string, unknown>);
+  }
+  return clean;
+}
+
+type RpcErrorLike = {
+  message?: string;
+  details?: string | null;
+  hint?: string | null;
+  code?: string;
+};
+
+function formatBackupRpcError(prefix: string, error: RpcErrorLike): Error {
+  const code = error.code?.trim() || '';
+  const baseMessage = error.message?.trim() || 'Erro desconhecido no banco de dados.';
+  const details = error.details?.trim();
+  const hint = error.hint?.trim();
+
+  let guidance = '';
+  if (code === '23503') {
+    guidance = 'Violação de chave estrangeira: verifique se todas as referências de registros e usuários existem ou se a migration de restauração está atualizada.';
+  } else if (code === '23505') {
+    guidance = 'Registro duplicado detectado durante a restauração.';
+  } else if (code === '23514') {
+    guidance = 'Um ou mais registros violaram uma restrição de validação do banco (CHECK).';
+  } else if (code === '22P02') {
+    guidance = 'Formato inválido de UUID, número ou data em um dos registros do backup.';
+  } else if (code === '42703' || baseMessage.includes('does not exist')) {
+    guidance = 'Estrutura de tabela ou coluna divergente no banco; verifique se todas as migrations foram aplicadas.';
+  } else if (code === '42501') {
+    guidance = 'Permissão administrativa insuficiente para executar a operação.';
+  } else if (code === 'PGRST202') {
+    guidance = 'Função RPC de backup/limpeza não encontrada no banco; aplique as migrations pendentes.';
+  }
+
+  const parts = [`${prefix}: ${baseMessage}`];
+  if (guidance) parts.push(guidance);
+  if (details) parts.push(`Detalhes: ${details}`);
+  if (hint) parts.push(`Sugestão: ${hint}`);
+  if (code) parts.push(`Código SQL: ${code}`);
+  return new Error(parts.join(' '));
 }
 
 /** Creates a platform-admin-only JSON export of operational database records. */
@@ -156,6 +216,7 @@ function collectSensitivePaths(value: unknown, path: string, output: string[]) {
   }
   if (!isPlainObject(value)) return;
   for (const [key, nestedValue] of Object.entries(value)) {
+    if (UNSAFE_OBJECT_KEYS.has(key)) continue;
     const nestedPath = `${path}.${key}`;
     if (SENSITIVE_KEY.test(key)) output.push(nestedPath);
     else collectSensitivePaths(nestedValue, nestedPath, output);
@@ -166,7 +227,7 @@ function collectSensitivePaths(value: unknown, path: string, output: string[]) {
 export function validateSystemBackup(input: unknown): ImportPreview {
   const errors: string[] = [];
   const warnings = [
-    'Os IDs de usuários referenciados precisam existir no ambiente de destino; dados de identidade não são importados.',
+    'Os IDs de usuários referenciados precisam existir no ambiente de destino ou serão vinculados ao administrador da restauração; dados de identidade não são importados.',
     'Metadados de gm_files não contêm os binários; os arquivos do Storage precisam existir no ambiente de destino.',
     'Envelopes de assinatura e seus links privados não são incluídos no backup por segurança.',
   ];
@@ -237,8 +298,16 @@ export function validateSystemBackup(input: unknown): ImportPreview {
           }
           for (const field of USER_REFERENCE_FIELDS) {
             const value = row[field];
-            if (typeof value === 'string' && !UUID_PATTERN.test(value)) {
+            if (value !== null && value !== undefined && (typeof value !== 'string' || !UUID_PATTERN.test(value))) {
               errors.push(`${table}[${index}].${field} precisa conter um UUID válido.`);
+            }
+          }
+          if (table === 'gm_contracts') {
+            if (row.payload !== null && row.payload !== undefined && !isPlainObject(row.payload)) {
+              errors.push(`gm_contracts[${index}].payload deve ser um objeto JSON.`);
+            }
+            if (row.empresa_id !== null && row.empresa_id !== undefined && (typeof row.empresa_id !== 'string' || !UUID_PATTERN.test(row.empresa_id))) {
+              errors.push(`gm_contracts[${index}].empresa_id precisa conter um UUID válido.`);
             }
           }
           if (table === 'signature_envelopes') {
@@ -247,6 +316,12 @@ export function validateSystemBackup(input: unknown): ImportPreview {
             if (!hasOwner && !hasTenant) errors.push(`signature_envelopes[${index}] precisa de owner_id ou empresa_id.`);
             if (hasOwner && (row.payload === null || row.payload === undefined)) {
               errors.push(`signature_envelopes[${index}].payload é obrigatório para envelope owner-scoped.`);
+            }
+            if (isPlainObject(row.payload) && Array.isArray(row.payload.signers)) {
+              const missingToken = row.payload.signers.some((signer) => isPlainObject(signer) && (signer.token === null || signer.token === undefined || signer.token === ''));
+              if (missingToken) {
+                errors.push(`signature_envelopes[${index}] contém signatários sem token privado; remova esses envelopes antes de restaurar.`);
+              }
             }
           }
           const sensitivePaths: string[] = [];
@@ -303,8 +378,12 @@ function validateIncludedReferences(
       }
       for (const [field, targetTable] of Object.entries(requiredReferenceTargets)) {
         const value = row[field];
-        if (typeof value === 'string' && !idsByTable.get(targetTable)?.has(value)) {
-          errors.push(`${table}[${index}].${field} não referencia um registro incluído em ${targetTable}.`);
+        if (typeof value === 'string') {
+          if (!UUID_PATTERN.test(value)) {
+            errors.push(`${table}[${index}].${field} precisa conter um UUID válido.`);
+          } else if (!idsByTable.get(targetTable)?.has(value)) {
+            errors.push(`${table}[${index}].${field} não referencia um registro incluído em ${targetTable}.`);
+          }
         }
       }
     });
@@ -315,29 +394,31 @@ export const AdminSystemBackupService = {
   exportFullSystemBackup,
   validateSystemBackup,
   async restoreSystemBackup(input: unknown, confirmation: string) {
+    await requirePlatformAdmin();
     const preview = validateSystemBackup(input);
     if (!preview.valid || !preview.canApply || !isPlainObject(input) || !isPlainObject(input.datasets)) {
       throw new Error('O backup precisa estar válido antes da restauração.');
     }
     if (confirmation !== 'RESTAURAR E SUBSTITUIR DADOS') {
-      throw new Error('Confirmação de restauração inválida.');
+      throw new Error('Confirmação de restauração inválida. Digite exatamente RESTAURAR E SUBSTITUIR DADOS.');
     }
+    const safeDatasets = cloneSafeDatasets(input.datasets);
     const { data, error } = await supabase.rpc('admin_restore_system_backup', {
-      p_datasets: input.datasets,
+      p_datasets: safeDatasets,
       p_confirmation: confirmation,
     });
-    if (error) throw new Error(`A restauração foi cancelada: ${error.message}`);
+    if (error) throw formatBackupRpcError('A restauração foi cancelada', error);
     return data as { restored: boolean; recordCount: number; inserted: Record<string, number> };
   },
   async clearSystemData(confirmation: string) {
     await requirePlatformAdmin();
     if (confirmation !== 'APAGAR TODOS OS DADOS') {
-      throw new Error('Confirmação inválida.');
+      throw new Error('Confirmação inválida. Digite exatamente APAGAR TODOS OS DADOS.');
     }
     const { data, error } = await supabase.rpc('admin_clear_operational_data', {
       p_confirmation: confirmation,
     });
-    if (error) throw new Error(`A limpeza não foi realizada: ${error.message}`);
+    if (error) throw formatBackupRpcError('A limpeza não foi realizada', error);
     return data as { cleared: boolean; deleted: Record<string, number> };
   },
 };

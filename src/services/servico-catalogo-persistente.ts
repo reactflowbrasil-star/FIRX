@@ -47,7 +47,12 @@ export async function loadServicosEmpresa(companyId: string): Promise<ServicoCat
 
   const seeds = listServicosCatalogo();
   const { error: seedError } = await supabase.from('services').insert(seeds.map((service) => toRow(companyId, service)));
-  if (seedError) throw new Error(`O catálogo inicial não pôde ser salvo no servidor: ${seedError.message}`);
+  if (seedError) {
+    if (seedError.code === '42501' || /row-level security|permission denied/i.test(seedError.message)) {
+      return seeds;
+    }
+    throw new Error(`O catálogo inicial não pôde ser salvo no servidor: ${seedError.message}`);
+  }
   const { data: inserted, error: reloadError } = await supabase.from('services').select('*').eq('empresa_id', companyId).order('ordem').order('nome');
   if (reloadError) throw new Error(`Falha ao carregar o catálogo salvo: ${reloadError.message}`);
 

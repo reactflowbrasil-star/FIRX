@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Plus, RefreshCw, Pencil, Trash2, Search, ShieldAlert, Eye, EyeOff } from 'lucide-react';
+import { Plus, RefreshCw, Pencil, Trash2, Search, ShieldAlert, Eye, EyeOff, Upload } from 'lucide-react';
 import { Button, Card, EmptyState, Input, Modal, PageHeader } from '@/components/ui';
 import { AdminResourceService, type AdminResourceRecord, type AdminResourceTable } from '@/services/admin-resource-service';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
@@ -62,7 +62,7 @@ const definitions: Record<string, ResourceDefinition> = {
     visible: ['numero', 'user_id', 'status', 'created_at'],
     fields: [
       { name: 'user_id', label: 'ID do usuário proprietário', required: true }, { name: 'numero', label: 'Número', type: 'number' },
-      { name: 'status', label: 'Status', type: 'select', required: true, options: ['rascunho', 'enviado', 'assinado', 'cancelado'].map((value) => ({ value, label: value })) },
+      { name: 'status', label: 'Status', type: 'select', required: true, options: ['rascunho', 'revisao', 'enviado', 'pendente_assinatura', 'assinado', 'cancelado', 'expirado'].map((value) => ({ value, label: value })) },
       { name: 'cliente_nome', label: 'Nome do cliente', required: true }, { name: 'cliente_documento', label: 'CPF/CNPJ do cliente' },
       { name: 'cliente_email', label: 'E-mail do cliente', type: 'email' }, { name: 'cliente_telefone', label: 'Telefone do cliente' },
       { name: 'valor', label: 'Valor total (R$)', type: 'number', required: true }, { name: 'entrada_valor', label: 'Entrada (R$)', type: 'number' },
@@ -88,7 +88,7 @@ const definitions: Record<string, ResourceDefinition> = {
     fields: [
       { name: 'empresa_id', label: 'ID da empresa', required: true }, { name: 'cliente', label: 'Cliente', required: true },
       { name: 'valor', label: 'Valor', type: 'number', required: true }, { name: 'vencimento', label: 'Vencimento', type: 'date', required: true },
-      { name: 'status', label: 'Status', type: 'text', required: true },
+      { name: 'status', label: 'Status', type: 'select', required: true, options: ['pendente', 'pago', 'atrasado'].map((value) => ({ value, label: value })) },
     ],
   },
 };
@@ -185,6 +185,7 @@ export default function AdminRecursos({ resource }: { resource: keyof typeof def
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [modalError, setModalError] = useState('');
   const [pdfBusy, setPdfBusy] = useState(false);
   const [contractPdfUrl, setContractPdfUrl] = useState('');
   const [viewing, setViewing] = useState<AdminResourceRecord | null>(null);
@@ -234,9 +235,11 @@ export default function AdminRecursos({ resource }: { resource: keyof typeof def
       initial.parcelas = '1';
       initial.entrada_valor = '0';
       initial.data_inicio = new Date().toISOString().slice(0, 10);
+    } else if (resource === 'financeiro') {
+      initial.status = 'pendente';
     }
     setForm(initial);
-    setError(''); setOpen(true);
+    setModalError(''); setOpen(true);
     setContractPdfUrl('');
   };
 
@@ -246,41 +249,45 @@ export default function AdminRecursos({ resource }: { resource: keyof typeof def
       const value = resource === 'contratos' && ['cliente_nome', 'cliente_documento', 'cliente_email', 'cliente_telefone', 'valor', 'entrada_valor', 'parcelas', 'valor_parcela', 'forma_pagamento', 'data_inicio', 'data_termino', 'pdf_path', 'observacoes'].includes(field.name)
         ? (row.payload as Record<string, unknown> | null)?.[field.name]
         : row[field.name];
+      if (field.type === 'json') {
+        if (value === null || value === undefined) return '';
+        return typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+      }
       return displayValue(value) === '—' ? '' : displayValue(value);
     };
     setForm(Object.fromEntries(definition.fields.map((field) => [field.name, valueFor(field)])));
     setContractPdfUrl('');
-    setError(''); setOpen(true);
+    setModalError(''); setOpen(true);
     if (resource === 'contratos' && typeof (row.payload as Record<string, unknown> | null)?.pdf_path === 'string') {
       void criarLinkArquivo(String((row.payload as Record<string, unknown>).pdf_path), 60 * 60)
         .then(setContractPdfUrl)
-        .catch((cause) => setError(cause instanceof Error ? cause.message : 'Não foi possível abrir o PDF vinculado.'));
+        .catch((cause) => setModalError(cause instanceof Error ? cause.message : 'Não foi possível abrir o PDF vinculado.'));
     }
   };
 
   const uploadContractPdf = async (file?: File) => {
     if (!file) return;
     if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
-      setError('Selecione um arquivo PDF.');
+      setModalError('Selecione um arquivo PDF.');
       return;
     }
     const header = new TextDecoder().decode(await file.slice(0, 5).arrayBuffer());
     if (header !== '%PDF-') {
-      setError('O arquivo não contém um cabeçalho PDF válido.');
+      setModalError('O arquivo não contém um cabeçalho PDF válido.');
       return;
     }
-    setPdfBusy(true); setError('');
+    setPdfBusy(true); setModalError('');
     try {
       const uploaded = await uploadArquivo(file, 'contratos');
       setForm((current) => ({ ...current, pdf_path: uploaded.caminho }));
       setContractPdfUrl(uploaded.url);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Não foi possível salvar o PDF.');
+      setModalError(cause instanceof Error ? cause.message : 'Não foi possível salvar o PDF.');
     } finally { setPdfBusy(false); }
   };
 
   const save = async (event: React.FormEvent) => {
-    event.preventDefault(); setSaving(true); setError('');
+    event.preventDefault(); setSaving(true); setModalError('');
     const payload: Record<string, unknown> = {};
     for (const field of definition.fields) {
       const value = form[field.name]?.trim() || '';
@@ -291,7 +298,7 @@ export default function AdminRecursos({ resource }: { resource: keyof typeof def
       try {
         payload[field.name] = field.type === 'number' ? Number(value) : field.type === 'json' ? JSON.parse(value) : value;
       } catch {
-        setError(`${field.label} precisa conter um JSON válido.`);
+        setModalError(`${field.label} precisa conter um JSON válido.`);
         setSaving(false);
         return;
       }
@@ -333,7 +340,7 @@ export default function AdminRecursos({ resource }: { resource: keyof typeof def
       else await AdminResourceService.create(definition.table, payload);
       setOpen(false); await load();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Falha ao salvar o registro.');
+      setModalError(cause instanceof Error ? cause.message : 'Falha ao salvar o registro.');
     } finally { setSaving(false); }
   };
 
@@ -413,7 +420,7 @@ export default function AdminRecursos({ resource }: { resource: keyof typeof def
           {isAdmin && !definition.readOnly && <Button size="sm" leftIcon={<Plus className="h-4 w-4" />} onClick={openCreate}>Novo</Button>}
         </div>
       } />
-      {error && !open && <div className="rounded-xl border border-erro/30 bg-erro/10 p-4 text-sm text-erro" role="alert"><div className="flex items-start gap-2"><ShieldAlert className="h-4 w-4 mt-0.5" />{error}</div></div>}
+      {error && <div className="rounded-xl border border-erro/30 bg-erro/10 p-4 text-sm text-erro" role="alert"><div className="flex items-start gap-2"><ShieldAlert className="h-4 w-4 mt-0.5" />{error}</div></div>}
       <Card padding="none" className="overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-color p-4"><div className="relative w-full max-w-md"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary" /><Input aria-label={`Buscar ${definition.title.toLowerCase()}`} placeholder="Buscar..." value={search} onChange={(event) => setSearch(event.target.value)} className="pl-10" /></div><Button type="button" variant="outline" size="sm" onClick={() => setShowHidden((value) => !value)}>{showHidden ? 'Exibir itens ativos' : `Exibir ocultos (${hiddenCount})`}</Button><p className="w-full text-xs text-text-secondary">Ocultar afeta somente esta lista neste navegador; o registro continua salvo.</p></div>
         {loading ? <p className="p-8 text-center text-sm text-text-secondary">Carregando…</p> : filtered.length === 0 ? <div className="p-8"><EmptyState title="Nenhum registro" description="Os registros disponíveis aparecerão aqui." /></div> : (
@@ -459,10 +466,25 @@ export default function AdminRecursos({ resource }: { resource: keyof typeof def
           </>
         )}
       </Card>
-      {isAdmin && <Modal open={open} onClose={() => !saving && setOpen(false)} title={editing ? `Editar ${definition.title.toLowerCase()}` : `Novo registro · ${definition.title.toLowerCase()}`} size="xl" footer={<><Button variant="outline" disabled={saving} onClick={() => setOpen(false)}>Cancelar</Button><Button form="admin-resource-form" type="submit" loading={saving}>{editing ? 'Salvar alterações' : 'Criar registro'}</Button></>}>
-        <form id="admin-resource-form" onSubmit={save} className="grid gap-4 sm:grid-cols-2">{error && <div className="sm:col-span-2 rounded-lg border border-erro/30 bg-erro/10 p-3 text-sm text-erro" role="alert">{error}</div>}
-          {definition.fields.filter((field) => !(resource === 'contratos' && field.name === 'pdf_path')).map((field) => <div key={field.name} className={field.type === 'textarea' || field.type === 'json' ? 'sm:col-span-2' : ''}>{field.type === 'select' ? <div><label htmlFor={`admin-${field.name}`} className="mb-1.5 block text-sm font-medium">{field.label}</label><select id={`admin-${field.name}`} required={field.required} className="w-full rounded-xl border border-border-color bg-bg-secondary px-3 py-2.5 text-sm" value={form[field.name] || ''} onChange={(event) => setForm((current) => ({ ...current, [field.name]: event.target.value }))}><option value="">Selecione…</option>{field.options?.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div> : field.type === 'textarea' || field.type === 'json' ? <div><label htmlFor={`admin-${field.name}`} className="mb-1.5 block text-sm font-medium">{field.label}</label><textarea id={`admin-${field.name}`} rows={field.type === 'json' ? 10 : 3} required={field.required} spellCheck={field.type !== 'json'} className="w-full rounded-xl border border-border-color bg-bg-secondary px-3 py-2.5 font-mono text-sm" value={form[field.name] || ''} onChange={(event) => setForm((current) => ({ ...current, [field.name]: event.target.value }))} /></div> : <Input id={`admin-${field.name}`} label={field.label} type={field.type || 'text'} required={field.required} hint={field.hint} value={form[field.name] || ''} onChange={(event) => setForm((current) => ({ ...current, [field.name]: event.target.value }))} />}</div>)}
-          {resource === 'contratos' && <div className="space-y-2 sm:col-span-2"><label htmlFor="contract-pdf-upload" className="block text-sm font-medium">PDF do contrato</label><input id="contract-pdf-upload" type="file" accept="application/pdf,.pdf" disabled={pdfBusy} onChange={(event) => { void uploadContractPdf(event.target.files?.[0]); event.target.value = ''; }} className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-brand/10 file:px-3 file:py-2 file:font-medium file:text-brand" />{pdfBusy && <p className="text-xs text-text-secondary">Enviando PDF ao armazenamento privado…</p>}{form.pdf_path && <p className="break-all text-xs text-text-secondary">Arquivo vinculado: {form.pdf_path}</p>}{contractPdfUrl && <a href={contractPdfUrl} target="_blank" rel="noreferrer" className="text-sm text-brand underline">Visualizar PDF enviado</a>}<p className="text-xs text-text-secondary">O PDF é enviado ao armazenamento privado e seu caminho fica no registro do contrato.</p></div>}
+      {isAdmin && <Modal open={open} onClose={() => { if (!saving) { setOpen(false); setModalError(''); } }} title={editing ? `Editar ${definition.title.toLowerCase()}` : `Novo registro · ${definition.title.toLowerCase()}`} size="xl" footer={<><Button variant="outline" disabled={saving} onClick={() => { setOpen(false); setModalError(''); }}>Cancelar</Button><Button form="admin-resource-form" type="submit" loading={saving}>{editing ? 'Salvar alterações' : 'Criar registro'}</Button></>}>
+        <form id="admin-resource-form" onSubmit={save} className="grid gap-4 sm:grid-cols-2">{modalError && <div className="sm:col-span-2 rounded-lg border border-erro/30 bg-erro/10 p-3 text-sm text-erro" role="alert">{modalError}</div>}
+          {definition.fields.filter((field) => !(resource === 'contratos' && field.name === 'pdf_path')).map((field) => <div key={field.name} className={field.type === 'textarea' || field.type === 'json' ? 'sm:col-span-2' : ''}>{field.type === 'select' ? <div><label htmlFor={`admin-${field.name}`} className="mb-1.5 block text-sm font-medium">{field.label}</label><select id={`admin-${field.name}`} required={field.required} className="w-full rounded-xl border border-border-color bg-bg-primary px-3 py-2.5 text-sm text-text-primary" value={form[field.name] || ''} onChange={(event) => setForm((current) => ({ ...current, [field.name]: event.target.value }))}><option value="">Selecione…</option>{field.options?.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div> : field.type === 'textarea' || field.type === 'json' ? <div><label htmlFor={`admin-${field.name}`} className="mb-1.5 block text-sm font-medium">{field.label}</label><textarea id={`admin-${field.name}`} rows={field.type === 'json' ? 10 : 3} required={field.required} spellCheck={field.type !== 'json'} className="w-full rounded-xl border border-border-color bg-bg-primary px-3 py-2.5 font-mono text-sm text-text-primary" value={form[field.name] || ''} onChange={(event) => setForm((current) => ({ ...current, [field.name]: event.target.value }))} /></div> : <Input id={`admin-${field.name}`} label={field.label} type={field.type || 'text'} required={field.required} hint={field.hint} value={form[field.name] || ''} onChange={(event) => setForm((current) => ({ ...current, [field.name]: event.target.value }))} />}</div>)}
+          {resource === 'contratos' && <div className="space-y-2 sm:col-span-2">
+            <label htmlFor="contract-pdf-upload" className="block text-sm font-medium">PDF do contrato</label>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <input id="contract-pdf-upload" type="file" accept="application/pdf,.pdf" disabled={pdfBusy} onChange={(event) => { void uploadContractPdf(event.target.files?.[0]); event.target.value = ''; }} className="peer sr-only" />
+              <label htmlFor="contract-pdf-upload" className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-hover peer-focus-visible:ring-2 peer-focus-visible:ring-brand ${pdfBusy ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}>
+                <Upload className="h-4 w-4" aria-hidden="true" />
+                {pdfBusy ? 'Enviando PDF…' : 'Escolher PDF'}
+              </label>
+              <span className="min-w-0 flex-1 truncate rounded-xl border border-border-color bg-bg-primary px-3 py-2.5 text-sm text-text-primary">
+                {form.pdf_path || <span className="text-text-secondary">Nenhum PDF vinculado</span>}
+              </span>
+            </div>
+            {pdfBusy && <p className="text-xs text-text-secondary">Enviando PDF ao armazenamento privado…</p>}
+            {contractPdfUrl && <a href={contractPdfUrl} target="_blank" rel="noreferrer" className="inline-block text-sm font-medium text-brand underline">Visualizar PDF enviado</a>}
+            <p className="text-xs text-text-secondary">O PDF é enviado ao armazenamento privado e seu caminho fica no registro do contrato.</p>
+          </div>}
         </form>
       </Modal>}
       <Modal open={!!viewing} onClose={() => { setViewing(null); setContractPreview(null); }} title={resource === 'contratos' ? `Contrato · ${displayValue(objectValue(viewing?.payload).cliente_nome)}` : resource === 'assinaturas' ? `Envelope · ${displayValue(objectValue(viewing?.payload).titulo)}` : `Visualizar · ${definition.title.toLowerCase()}`} size="xl" footer={<Button variant="outline" onClick={() => { setViewing(null); setContractPreview(null); }}>Fechar</Button>}>

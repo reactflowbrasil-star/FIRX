@@ -61,13 +61,18 @@ export default function Assinaturas() {
     setLoading(true);
     setLoadError('');
     try {
-      setRows(await listEnvelopes());
+      const all = await listEnvelopes();
+      setRows(
+        empresaAtiva?.id
+          ? all.filter((envelope) => !envelope.empresa_id || envelope.empresa_id === empresaAtiva.id)
+          : all
+      );
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : 'Não foi possível carregar os envelopes.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [empresaAtiva?.id]);
 
   useEffect(() => {
     void reload();
@@ -91,6 +96,20 @@ export default function Assinaturas() {
     completed: rows.filter((row) => row.status === 'concluido').length,
   }), [rows]);
 
+  const defaultDocumento = 'CONTRATO DE PRESTAÇÃO DE SERVIÇOS\n\nPelo presente instrumento, as partes acordam os termos...\n\nCláusula 1 — Objeto\nCláusula 2 — Valor\nCláusula 3 — Prazo\nCláusula 4 — Foro';
+  const defaultMsg = 'Por favor, revise e assine o documento.';
+
+  const resetModalForm = () => {
+    setTitulo('');
+    setDescricao('');
+    setDocumento(defaultDocumento);
+    setMsg(defaultMsg);
+    setSigners([{ nome: '', email: '' }, { nome: '', email: '' }]);
+    setArquivoNome(undefined);
+    setArquivoStoragePath(undefined);
+    setFormError('');
+  };
+
   const criar = async () => {
     setFormError('');
     if (!titulo.trim() || !documento.trim()) {
@@ -104,6 +123,7 @@ export default function Assinaturas() {
     }
     try {
       const env = await createEnvelope({
+        empresa_id: empresaAtiva?.id,
         titulo: titulo.trim(),
         descricao,
         documentoTexto: documento,
@@ -114,8 +134,7 @@ export default function Assinaturas() {
         signers: validSigners,
       });
       setOpen(false);
-      setTitulo('');
-      setFormError('');
+      resetModalForm();
       await reload();
       navigate(`/assinaturas/${env.id}`);
     } catch (error) {
@@ -123,21 +142,23 @@ export default function Assinaturas() {
     }
   };
   const enviar = async (id: string) => {
+    setLoadError('');
     try {
       await sendEnvelope(id, user?.email || 'sistema');
       await reload();
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Não foi possível enviar o envelope.');
+      setLoadError(error instanceof Error ? error.message : 'Não foi possível enviar o envelope.');
     }
   };
 
   const copyLink = async (token: string) => {
+    setLoadError('');
     try {
       await copySigningLink(token);
       setCopied(token);
       setTimeout(() => setCopied(''), 2000);
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Não foi possível copiar o link.');
+      setLoadError(error instanceof Error ? error.message : 'Não foi possível copiar o link.');
     }
   };
 
@@ -151,7 +172,7 @@ export default function Assinaturas() {
             <Button variant="outline" size="sm" leftIcon={<Bell className="w-4 h-4" />} onClick={() => setAlertsOpen(true)}>
               Alertas {unread > 0 ? `(${unread})` : ''}
             </Button>
-            <Button size="sm" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setOpen(true)}>
+            <Button size="sm" leftIcon={<Plus className="w-4 h-4" />} onClick={() => { resetModalForm(); setOpen(true); }}>
               Novo envelope
             </Button>
           </>
@@ -190,7 +211,7 @@ export default function Assinaturas() {
           description="Crie um documento, adicione signatários e envie para assinatura."
           icon={<FileSignature className="w-6 h-6" />}
           action={(
-            <Button leftIcon={<Plus className="w-4 h-4" />} onClick={() => setOpen(true)}>
+            <Button leftIcon={<Plus className="w-4 h-4" />} onClick={() => { resetModalForm(); setOpen(true); }}>
               Criar envelope
             </Button>
           )}
@@ -253,7 +274,9 @@ export default function Assinaturas() {
                       variant="ghost"
                       leftIcon={<Trash2 className="w-3.5 h-3.5" />}
                       onClick={() => {
-                        void deleteEnvelope(e.id).then(reload).catch((error) => window.alert(error.message));
+                        if (!window.confirm(`Excluir o envelope “${e.titulo}”?`)) return;
+                        setLoadError('');
+                        void deleteEnvelope(e.id).then(reload).catch((error) => setLoadError(error instanceof Error ? error.message : 'Não foi possível excluir o envelope.'));
                       }}
                     />}
                   </div>
@@ -342,7 +365,7 @@ export default function Assinaturas() {
                 variant="outline"
                 onClick={() => {
                   markAllAlertsRead();
-                  reload();
+                  setAlerts(listAlerts());
                 }}
               >
                 Marcar todos como lidos
@@ -353,7 +376,7 @@ export default function Assinaturas() {
                   type="button"
                   onClick={() => {
                     markAlertRead(a.id);
-                    reload();
+                    setAlerts(listAlerts());
                     navigate(`/assinaturas/${a.envelopeId}`);
                     setAlertsOpen(false);
                   }}

@@ -46,6 +46,13 @@ function pushEvent(type: string, message: string, actor?: string): EnvelopeEvent
   return { id: uid(), at: new Date().toISOString(), type, message, actor };
 }
 
+function getActiveCompanyId(): string | null {
+  if (typeof localStorage === 'undefined') return null;
+  const raw = localStorage.getItem('empresaAtiva')?.trim();
+  if (!raw || raw === 'null' || raw === 'undefined') return null;
+  return raw;
+}
+
 function throwIfError(error: { message: string } | null, action: string): asserts error is null {
   if (error) throw new Error(`${action}: ${error.message}`);
 }
@@ -54,22 +61,35 @@ export async function listEnvelopes(): Promise<Envelope[]> {
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   throwIfError(userError, 'Não foi possível validar sua sessão');
   if (!user) throw new Error('Entre na sua conta para acessar os envelopes.');
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('signature_envelopes')
-    .select('payload')
+    .select('empresa_id, payload')
     .order('updated_at', { ascending: false });
+  if (error && /empresa_id/i.test(error.message)) {
+    const fallback = await supabase
+      .from('signature_envelopes')
+      .select('payload')
+      .order('updated_at', { ascending: false });
+    data = (fallback.data || []).map((row) => ({ empresa_id: null, payload: row.payload }));
+    error = fallback.error;
+  }
   throwIfError(error, 'Não foi possível carregar os envelopes');
-  const remote = (data || []).map((row) => row.payload as Envelope);
+  const remote = (data || []).map((row) => {
+    const payload = row.payload as Envelope;
+    const empresaId = (row as { empresa_id?: string | null }).empresa_id || payload.empresa_id;
+    return empresaId ? { ...payload, empresa_id: empresaId } : payload;
+  });
   const remoteIds = new Set(remote.map((envelope) => envelope.id));
   const local = read<Envelope[]>('grow_envelopes_v1', []).filter(
     (envelope) => envelope.createdBy.trim().toLowerCase() === (user.email || '').toLowerCase()
       && !remoteIds.has(envelope.id)
   );
   if (local.length) {
+    const activeCompanyId = getActiveCompanyId();
     const { error: importError } = await supabase.from('signature_envelopes').upsert(
       local.map((envelope) => ({
         id: envelope.id,
-        empresa_id: envelope.empresa_id || localStorage.getItem('empresaAtiva'),
+        empresa_id: envelope.empresa_id || activeCompanyId,
         owner_id: user.id,
         payload: envelope,
         updated_at: envelope.updatedAt,
@@ -109,7 +129,7 @@ export async function saveEnvelope(envelope: Envelope): Promise<Envelope> {
   if (!user) throw new Error('Entre na sua conta para salvar o envelope.');
   const { error } = await supabase.from('signature_envelopes').upsert({
     id: envelope.id,
-    empresa_id: envelope.empresa_id || localStorage.getItem('empresaAtiva'),
+    empresa_id: envelope.empresa_id || getActiveCompanyId(),
     owner_id: user.id,
     payload: envelope,
     updated_at: envelope.updatedAt,
@@ -148,7 +168,7 @@ export async function createEnvelope(input: {
   const now = new Date().toISOString();
   const envelope: Envelope = {
     id: uid(),
-    empresa_id: input.empresa_id || localStorage.getItem('empresaAtiva') || undefined,
+    empresa_id: input.empresa_id?.trim() || getActiveCompanyId() || undefined,
     titulo: input.titulo,
     descricao: input.descricao || '',
     documentoTexto: input.documentoTexto,

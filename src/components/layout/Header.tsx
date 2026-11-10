@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Bell, Search, Menu, LogOut, Settings, User, ShieldCheck, Volume2, VolumeX } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -37,8 +37,31 @@ export function Header({
   const [avatarFailed, setAvatarFailed] = useState(false);
   const { isAdmin } = useAdminAuth();
   const unreadCount = notifications.filter((n) => !n.read).length;
+  const menusRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => setAvatarFailed(false), [user?.avatar]);
+
+  useEffect(() => {
+    if (!notifOpen && !profileOpen) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (menusRef.current && !menusRef.current.contains(event.target as Node)) {
+        setNotifOpen(false);
+        setProfileOpen(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setNotifOpen(false);
+        setProfileOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [notifOpen, profileOpen]);
 
   return (
     <header
@@ -77,7 +100,7 @@ export function Header({
         </div>
       </div>
 
-      <div className="flex items-center gap-1.5 ml-auto">
+      <div ref={menusRef} className="flex items-center gap-1.5 ml-auto">
         {isAdmin && (
           <Link
             to="/admin"
@@ -120,7 +143,7 @@ export function Header({
                 <h3 className="text-sm font-semibold text-text-primary">Atualizações</h3>
                 <div className="flex items-center gap-2">
                   {unreadCount > 0 && (
-                    <span className="rounded-full bg-brand-surface px-2.5 py-0.5 text-[11px] font-semibold text-brand-dark dark:text-brand-light">
+                    <span className="rounded-full bg-brand-surface px-2.5 py-0.5 text-[11px] font-semibold text-brand">
                       {unreadCount} novas
                     </span>
                   )}

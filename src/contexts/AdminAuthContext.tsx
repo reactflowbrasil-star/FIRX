@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -47,40 +48,55 @@ function toAdminSession(user: {
 export function AdminAuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<AdminSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const mountedRef = useRef(true);
+  const refreshInFlightRef = useRef<Promise<void> | null>(null);
 
   const refreshAdminSession = useCallback(async () => {
-    try {
-      const { data, error } = await supabase.auth.getUser();
-      if (error || !data.user) {
-        setSession(null);
-        return;
+    if (refreshInFlightRef.current) return refreshInFlightRef.current;
+    const promise = (async () => {
+      try {
+        const { data, error } = await supabase.auth.getUser();
+        if (!mountedRef.current) return;
+        if (error || !data.user) {
+          setSession(null);
+          return;
+        }
+        const { data: authorized, error: authorizationError } = await supabase.rpc('is_platform_admin');
+        if (!mountedRef.current) return;
+        setSession(authorizationError || authorized !== true
+          ? null
+          : toAdminSession(data.user as Parameters<typeof toAdminSession>[0]));
+      } catch {
+        if (mountedRef.current) setSession(null);
       }
-      const { data: authorized, error: authorizationError } = await supabase.rpc('is_platform_admin');
-      setSession(authorizationError || authorized !== true
-        ? null
-        : toAdminSession(data.user as Parameters<typeof toAdminSession>[0]));
-    } catch {
-      setSession(null);
-    }
+    })().finally(() => {
+      if (refreshInFlightRef.current === promise) {
+        refreshInFlightRef.current = null;
+      }
+    });
+    refreshInFlightRef.current = promise;
+    return promise;
   }, []);
 
   useEffect(() => {
-    let mounted = true;
+    mountedRef.current = true;
     void refreshAdminSession().finally(() => {
-      if (mounted) setIsLoading(false);
+      if (mountedRef.current) setIsLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (!mounted) return;
+      if (!mountedRef.current) return;
       if (event === 'SIGNED_OUT') {
         setSession(null);
         return;
       }
-      window.setTimeout(() => { if (mounted) void refreshAdminSession(); }, 0);
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        window.setTimeout(() => { if (mountedRef.current) void refreshAdminSession(); }, 0);
+      }
     });
 
     return () => {
-      mounted = false;
+      mountedRef.current = false;
       subscription.unsubscribe();
     };
   }, [refreshAdminSession]);

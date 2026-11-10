@@ -20,6 +20,7 @@ export default function AdminUsuarios() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [modalError, setModalError] = useState('');
   const [notice, setNotice] = useState('');
   const [viewing, setViewing] = useState<AdminUser | null>(null);
   const { hiddenIds, hiddenCount, showHidden, setShowHidden, toggleHidden } = useAdminHiddenRecords('usuarios');
@@ -41,20 +42,24 @@ export default function AdminUsuarios() {
       && (!term || `${user.nome} ${user.email} ${user.role} ${user.memberships.map((item) => item.empresa_nome).join(' ')}`.toLowerCase().includes(term)));
   }, [users, search, showHidden, hiddenIds]);
 
-  const newUser = () => { setEditing(null); setForm({ ...blankForm, empresaId: companies[0]?.id || '' }); setError(''); setNotice(''); setOpen(true); };
-  const editUser = (user: AdminUser) => { setEditing(user); setForm({ ...blankForm, nome: user.nome, telefone: user.telefone || '' }); setError(''); setOpen(true); };
+  const newUser = () => { setEditing(null); setForm({ ...blankForm, empresaId: companies[0]?.id || '' }); setModalError(''); setNotice(''); setOpen(true); };
+  const editUser = (user: AdminUser) => { setEditing(user); setForm({ ...blankForm, nome: user.nome, telefone: user.telefone || '' }); setModalError(''); setOpen(true); };
 
   const save = async (event: React.FormEvent) => {
-    event.preventDefault(); setSaving(true); setError('');
+    event.preventDefault(); setSaving(true); setModalError('');
     try {
-      if (editing) await AdminUserService.update(editing.id, form.nome, form.telefone);
-      else {
+      let postCreateWarning = '';
+      if (editing) {
+        await AdminUserService.update(editing.id, form.nome, form.telefone);
+      } else {
         const result = await AdminUserService.create(form.empresaId, form.email, form.nome);
         if (result.emailSent) setNotice(result.message);
-        else setError(result.message);
+        else postCreateWarning = result.message;
       }
-      setOpen(false); await load();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Falha ao salvar usuário.'); }
+      setOpen(false);
+      await load();
+      if (postCreateWarning) setError(postCreateWarning);
+    } catch (cause) { setModalError(cause instanceof Error ? cause.message : 'Falha ao salvar usuário.'); }
     finally { setSaving(false); }
   };
 
@@ -69,7 +74,7 @@ export default function AdminUsuarios() {
   return (
     <div className="max-w-7xl space-y-4">
       <PageHeader title="Usuários" description="Contas, dados de perfil e vínculos empresariais" actions={<div className="flex gap-2"><Button size="sm" variant="outline" leftIcon={<RefreshCw className="h-4 w-4" />} onClick={() => void load()}>Atualizar</Button>{isAdmin && <Button size="sm" leftIcon={<Plus className="h-4 w-4" />} disabled={!companies.length} onClick={newUser}>Novo vendedor</Button>}</div>} />
-      {error && !open && <div className="rounded-xl border border-erro/30 bg-erro/10 p-4 text-sm text-erro" role="alert">{error}</div>}
+      {error && <div className="rounded-xl border border-erro/30 bg-erro/10 p-4 text-sm text-erro" role="alert">{error}</div>}
       {notice && <div className="rounded-xl border border-brand/30 bg-brand/10 p-4 text-sm text-text-primary" role="status">{notice}</div>}
       <Card padding="none" className="overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-color p-4"><div className="relative w-full max-w-md"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary" /><Input aria-label="Buscar usuários" placeholder="Buscar nome, e-mail ou empresa..." value={search} onChange={(event) => setSearch(event.target.value)} className="pl-10" /></div><Button type="button" variant="outline" size="sm" onClick={() => setShowHidden((value) => !value)}>{showHidden ? 'Exibir itens ativos' : `Exibir ocultos (${hiddenCount})`}</Button><p className="w-full text-xs text-text-secondary">Ocultar afeta somente esta lista neste navegador; a conta continua ativa.</p></div>
@@ -93,13 +98,13 @@ export default function AdminUsuarios() {
           </>
         )}
       </Card>
-      {isAdmin && <Modal open={open} onClose={() => !saving && setOpen(false)} title={editing ? 'Editar usuário' : 'Criar usuário vendedor'} footer={<><Button variant="outline" disabled={saving} onClick={() => setOpen(false)}>Cancelar</Button><Button form="admin-user-form" type="submit" loading={saving}>{editing ? 'Salvar alterações' : 'Criar usuário'}</Button></>}>
-        <form id="admin-user-form" onSubmit={save} className="grid gap-4 sm:grid-cols-2">{error && <div className="sm:col-span-2 rounded-lg border border-erro/30 bg-erro/10 p-3 text-sm text-erro" role="alert">{error}</div>}
+      {isAdmin && <Modal open={open} onClose={() => { if (!saving) { setOpen(false); setModalError(''); } }} title={editing ? 'Editar usuário' : 'Criar usuário vendedor'} footer={<><Button variant="outline" disabled={saving} onClick={() => { setOpen(false); setModalError(''); }}>Cancelar</Button><Button form="admin-user-form" type="submit" loading={saving}>{editing ? 'Salvar alterações' : 'Criar usuário'}</Button></>}>
+        <form id="admin-user-form" onSubmit={save} className="grid gap-4 sm:grid-cols-2">{modalError && <div className="sm:col-span-2 rounded-lg border border-erro/30 bg-erro/10 p-3 text-sm text-erro" role="alert">{modalError}</div>}
           <Input label="Nome" required value={form.nome} onChange={(event) => setForm({ ...form, nome: event.target.value })} />
           {editing ? <Input label="Telefone" type="tel" value={form.telefone} onChange={(event) => setForm({ ...form, telefone: event.target.value })} /> : <>
             <Input label="E-mail" type="email" required value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} />
             <p className="sm:col-span-2 text-sm text-text-secondary">O vendedor receberá um link de ativação por e-mail e definirá a própria senha ao abrir o convite.</p>
-            <div className="sm:col-span-2"><label htmlFor="new-user-company" className="mb-1.5 block text-sm font-medium">Empresa</label><select id="new-user-company" className="w-full rounded-xl border border-border-color bg-bg-secondary px-3 py-2.5 text-sm" required value={form.empresaId} onChange={(event) => setForm({ ...form, empresaId: event.target.value })}><option value="">Selecione a empresa…</option>{companies.map((company) => <option key={company.id} value={company.id}>{company.nome}</option>)}</select><p className="mt-1 text-xs text-text-secondary">A conta criada terá papel de vendedor na empresa selecionada.</p></div>
+            <div className="sm:col-span-2"><label htmlFor="new-user-company" className="mb-1.5 block text-sm font-medium">Empresa</label><select id="new-user-company" className="w-full rounded-xl border border-border-color bg-bg-primary px-3 py-2.5 text-sm text-text-primary" required value={form.empresaId} onChange={(event) => setForm({ ...form, empresaId: event.target.value })}><option value="">Selecione a empresa…</option>{companies.map((company) => <option key={company.id} value={company.id}>{company.nome}</option>)}</select><p className="mt-1 text-xs text-text-secondary">A conta criada terá papel de vendedor na empresa selecionada.</p></div>
           </>}
         </form>
       </Modal>}

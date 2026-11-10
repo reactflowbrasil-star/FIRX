@@ -31,6 +31,9 @@ export class AdminResourceService {
       await this.createEmpresa(payload, user.id);
       return;
     }
+    if (table === 'signature_envelopes' && !payload.id) {
+      payload.id = crypto.randomUUID();
+    }
 
     const { data, error } = await supabase.from(table).insert(payload).select('id').single();
     if (error) throw new Error(`Falha ao criar registro: ${error.message}`);
@@ -93,23 +96,36 @@ export class AdminResourceService {
     const responsavelId = typeof values.responsavel_id === 'string' && values.responsavel_id.trim()
       ? values.responsavel_id.trim()
       : adminUserId;
-    const { data, error } = await supabase.from('empresas').insert({
-      ...values,
-      responsavel_id: responsavelId,
-      configuracoes: values.configuracoes ?? {},
-    }).select('id').single();
-    if (error) throw new Error(`Falha ao criar empresa: ${error.message}`);
+    const nome = typeof values.nome === 'string' ? values.nome.trim() : '';
+    const cnpj = typeof values.cnpj === 'string' && values.cnpj.trim() ? values.cnpj.trim() : null;
+    const configuracoes = values.configuracoes && typeof values.configuracoes === 'object' && !Array.isArray(values.configuracoes)
+      ? values.configuracoes
+      : {};
 
-    try {
-      await this.ensureCompanyOwnerMembership(data.id, responsavelId);
-    } catch (cause) {
-      const { error: rollbackError } = await supabase.from('empresas').delete().eq('id', data.id);
-      const reason = cause instanceof Error ? cause.message : 'falha ao associar o responsável';
-      if (rollbackError) throw new Error(`Empresa criada, mas falhou o vínculo do responsável (${reason}) e a limpeza do registro também falhou: ${rollbackError.message}`);
-      throw new Error(`Falha ao vincular o responsável; empresa recém-criada removida: ${reason}`);
+    const { data: empresaId, error } = await supabase.rpc('create_empresa_with_admin', {
+      p_nome: nome,
+      p_cnpj: cnpj,
+      p_configuracoes: configuracoes,
+    });
+    if (error || typeof empresaId !== 'string') {
+      throw new Error(`Falha ao criar empresa: ${error?.message || 'ID não retornado.'}`);
     }
 
-    await this.audit(adminUserId, 'empresa.criada', { tabela: 'empresas', registro_id: data.id, responsavel_id: responsavelId });
+    if (responsavelId !== adminUserId) {
+      try {
+        const { error: ownerError } = await supabase.from('empresas').update({ responsavel_id: responsavelId }).eq('id', empresaId);
+        if (ownerError) throw new Error(`Falha ao definir o responsável: ${ownerError.message}`);
+        await this.ensureCompanyOwnerMembership(empresaId, responsavelId);
+        await supabase.from('empresa_members').delete().eq('empresa_id', empresaId).eq('usuario_id', adminUserId);
+      } catch (cause) {
+        const { error: rollbackError } = await supabase.from('empresas').delete().eq('id', empresaId);
+        const reason = cause instanceof Error ? cause.message : 'falha ao associar o responsável';
+        if (rollbackError) throw new Error(`Empresa criada, mas falhou o vínculo do responsável (${reason}) e a limpeza do registro também falhou: ${rollbackError.message}`);
+        throw new Error(`Falha ao vincular o responsável; empresa recém-criada removida: ${reason}`);
+      }
+    }
+
+    await this.audit(adminUserId, 'empresa.criada', { tabela: 'empresas', registro_id: empresaId, responsavel_id: responsavelId });
   }
 
   private static async ensureCompanyOwnerMembership(empresaId: string, userId: string) {

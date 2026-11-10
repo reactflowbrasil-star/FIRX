@@ -8,18 +8,27 @@ export interface DashboardOverview {
 
 const monthName = (date: Date) => new Intl.DateTimeFormat('pt-BR', { month: 'short' }).format(date).replace('.', '');
 
+function getLocalTodayIso() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
 export async function getDashboardOverview(empresaId: string | null): Promise<DashboardOverview> {
   if (!empresaId) return { receitaMensal: [], contratosPorStatus: [], resumo: { clientes: 0, contratos: 0, parcelasAtrasadas: 0, recebido: 0, aReceber: 0 } };
 
-  const [clients, contracts, installments, entries] = await Promise.all([
+  const [clients, contracts, gmContracts, installments, entries] = await Promise.all([
     supabase.from('clients').select('id', { count: 'exact', head: true }).eq('empresa_id', empresaId),
     supabase.from('contratos').select('id,status,valor_total').eq('empresa_id', empresaId),
+    supabase.from('gm_contracts').select('id,status').eq('empresa_id', empresaId),
     supabase.from('parcelas').select('valor_previsto,valor_recebido,status,data_vencimento,data_pagamento').eq('empresa_id', empresaId),
     supabase.from('gm_financial_entries').select('valor,status,vencimento').eq('empresa_id', empresaId),
   ]);
 
   for (const result of [clients, contracts, installments, entries]) {
     if (result.error) throw new Error(`Não foi possível carregar os indicadores do dashboard: ${result.error.message}`);
+  }
+  if (gmContracts.error && gmContracts.error.code !== '42703' && !/empresa_id/i.test(gmContracts.error.message)) {
+    throw new Error(`Não foi possível carregar os contratos do dashboard: ${gmContracts.error.message}`);
   }
 
   const months = Array.from({ length: 6 }, (_, index) => {
@@ -50,23 +59,28 @@ export async function getDashboardOverview(empresaId: string | null): Promise<Da
     if (row.status === 'pago') month.recebido += Number(row.valor || 0);
   });
 
-  const contractsData = contracts.data || [];
+  const mergedContracts = new Map<string, string>();
+  (contracts.data || []).forEach((contract) => mergedContracts.set(contract.id, contract.status));
+  (gmContracts.error ? [] : gmContracts.data || []).forEach((contract) => mergedContracts.set(contract.id, contract.status));
+
   const statusLabels: Record<string, string> = {
     rascunho: 'Rascunho', revisao: 'Em revisão', enviado: 'Enviado',
     pendente_assinatura: 'Aguardando assinatura', assinado: 'Assinado', cancelado: 'Cancelado', expirado: 'Expirado',
   };
   const statusTotals = new Map<string, number>();
-  contractsData.forEach((contract) => statusTotals.set(contract.status, (statusTotals.get(contract.status) || 0) + 1));
+  mergedContracts.forEach((status) => statusTotals.set(status, (statusTotals.get(status) || 0) + 1));
   const installmentsPaid = installmentRows.reduce((sum, row) => sum + Number(row.valor_recebido || 0), 0);
   const entriesPaid = entryRows.filter((row) => row.status === 'pago').reduce((sum, row) => sum + Number(row.valor || 0), 0);
+  const todayLocal = getLocalTodayIso();
 
   return {
     receitaMensal: months.map(({ mes, recebido, previsto }) => ({ mes, recebido, previsto })),
     contratosPorStatus: [...statusTotals].map(([status, total]) => ({ status: statusLabels[status] || status, total })),
     resumo: {
       clientes: clients.count || 0,
-      contratos: contractsData.length,
-      parcelasAtrasadas: installmentRows.filter((row) => row.status === 'atrasado').length + entryRows.filter((row) => row.status === 'atrasado').length,
+      contratos: mergedContracts.size,
+      parcelasAtrasadas: installmentRows.filter((row) => row.status === 'atrasado').length
+        + entryRows.filter((row) => row.status === 'atrasado' || (row.status === 'pendente' && row.vencimento < todayLocal)).length,
       recebido: installmentsPaid + entriesPaid,
       aReceber: installmentRows.reduce((sum, row) => sum + Math.max(Number(row.valor_previsto || 0) - Number(row.valor_recebido || 0), 0), 0)
         + entryRows.filter((row) => row.status !== 'pago').reduce((sum, row) => sum + Number(row.valor || 0), 0),

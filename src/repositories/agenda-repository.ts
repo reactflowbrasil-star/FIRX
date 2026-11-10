@@ -16,10 +16,14 @@ interface Filtros {
 
 export class AgendaRepository {
   static async create(data: CreateCompromissoData, userId: string): Promise<AgendaCompromisso> {
+    const duracao = data.duracao_minutos || 60;
+    const dataFim = new Date(new Date(data.data_hora).getTime() + duracao * 60000).toISOString();
     const { data: comp, error } = await supabase
       .from('agenda')
       .insert({
         ...data,
+        duracao_minutos: duracao,
+        data_fim: dataFim,
         criado_por: userId,
         criado_em: new Date().toISOString(),
         atualizado_em: new Date().toISOString(),

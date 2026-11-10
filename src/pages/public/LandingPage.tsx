@@ -127,7 +127,7 @@ function ProductPreview() {
           <div className="rounded-2xl bg-bg-secondary p-3.5 sm:p-4">
             <p className="text-xs text-text-secondary">A receber</p>
             <p className="mt-1 text-xl font-bold tracking-tight text-text-primary sm:text-2xl">R$ 42.380</p>
-            <p className="mt-1 text-[11px] font-medium text-brand-dark dark:text-brand-light">Visão financeira clara</p>
+            <p className="mt-1 text-[11px] font-medium text-brand">Visão financeira clara</p>
           </div>
           <div className="rounded-2xl bg-bg-secondary p-3.5 sm:p-4">
             <p className="text-xs text-text-secondary">Contratos ativos</p>
@@ -289,7 +289,7 @@ export default function LandingPage() {
           <div aria-hidden="true" className="pointer-events-none absolute right-[12%] top-[18%] -z-10 h-48 w-48 rounded-full border border-brand/10" />
           <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 pb-20 pt-14 sm:px-6 sm:pb-24 sm:pt-20 lg:grid-cols-[1.02fr_.98fr] lg:gap-10 lg:px-8 lg:py-24">
             <div className="landing-hero-copy mx-auto w-full max-w-2xl text-center lg:mx-0 lg:text-left">
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-brand-surface px-3.5 py-1.5 text-xs font-semibold tracking-wide text-brand-dark dark:text-brand-light">
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-brand-surface px-3.5 py-1.5 text-xs font-semibold tracking-wide text-brand">
                 <Sparkles aria-hidden="true" className="h-3.5 w-3.5" /> GESTÃO COMERCIAL E FINANCEIRA
               </div>
               <h1 className="font-display text-[clamp(2.65rem,7.6vw,5.6rem)] font-light leading-[0.98] tracking-[-0.065em] text-text-primary">
@@ -342,7 +342,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="modulos" className="border-y border-border-color/70 bg-bg-primary/55 py-16 sm:py-20 lg:py-24">
+        <section id="modulos" className="scroll-mt-24 border-y border-border-color/70 bg-bg-primary/55 py-16 sm:py-20 lg:py-24">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div data-reveal className="mx-auto mb-10 max-w-3xl text-center sm:mb-12">
               <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-brand">Uma operação conectada</p>

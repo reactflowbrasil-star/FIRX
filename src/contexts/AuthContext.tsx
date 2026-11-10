@@ -3,21 +3,23 @@ import {
   useContext,
   useState,
   useEffect,
+  useRef,
   ReactNode,
   useCallback,
 } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { criarLinkArquivo } from '@/services/file-storage';
-import { hasPermission as checkPermission } from '@/lib/permissions';
+import { hasPermission as checkPermission, ROLES, type Role } from '@/lib/permissions';
 import type { UserSession, Empresa } from '@/lib/auth-types';
 
 interface AuthContextValue {
   user: UserSession | null;
   empresas: Empresa[];
   empresaAtiva: Empresa | null;
+  isMarketingMember: boolean;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<UserSession>;
   register: (nome: string, email: string, senha: string, empresaNome: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
@@ -53,13 +55,34 @@ function getAuthCallbackUrl() {
   return new URL('auth/callback', appBaseUrl).toString();
 }
 
+function readSavedEmpresaId(): string | null {
+  try {
+    return window.localStorage.getItem('empresaAtiva');
+  } catch {
+    return null;
+  }
+}
+
+function writeSavedEmpresaId(empresaId: string | null) {
+  try {
+    if (empresaId) window.localStorage.setItem('empresaAtiva', empresaId);
+    else window.localStorage.removeItem('empresaAtiva');
+  } catch {
+    // Ignore storage quota / private-mode restrictions.
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserSession | null>(null);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [empresaAtiva, setEmpresaAtiva] = useState<Empresa | null>(null);
+  const [isMarketingMember, setIsMarketingMember] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const mountedRef = useRef(true);
+  const authEpochRef = useRef(0);
+  const hydrationInFlightRef = useRef<{ userId: string; promise: Promise<UserSession> } | null>(null);
 
-  const loadUserCompanies = useCallback(async (userId: string): Promise<Empresa[]> => {
+  const fetchUserCompanies = useCallback(async (userId: string): Promise<Empresa[]> => {
     try {
       const { data, error } = await supabase
         .from('empresa_members')
@@ -69,28 +92,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) {
         console.warn('Falha ao carregar empresas:', error.message);
-        setEmpresas([]);
-        setEmpresaAtiva(null);
         return [];
       }
 
-      const loadedEmpresas: Empresa[] = (data || []).map((m: any) => ({
+      return (data || []).map((m: any) => ({
         id: m.empresas?.id ?? m.empresa_id,
         nome: m.empresas?.nome ?? 'Empresa',
         cnpj: m.empresas?.cnpj ?? null,
         role: m.role,
       }));
-      setEmpresas(loadedEmpresas);
-
-      if (loadedEmpresas.length > 0) {
-        const savedId = localStorage.getItem('empresaAtiva');
-        const active =
-          loadedEmpresas.find((e) => e.id === savedId) || loadedEmpresas[0];
-        setEmpresaAtiva(active);
-        return loadedEmpresas;
-      }
-      setEmpresaAtiva(null);
-      return loadedEmpresas;
     } catch (err) {
       console.warn('Erro ao carregar empresas', err);
       return [];
@@ -106,29 +116,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const nome = displayNameFromUser(authUser);
       const email = authUser.email || '';
 
-      await supabase.from('profiles').upsert({
-        id: authUser.id,
-        email,
-        nome,
-      });
+      const { data: existingProfile, error: profileLookupError } = await supabase
+        .from('profiles')
+        .select('id, nome, email, role')
+        .eq('id', authUser.id)
+        .maybeSingle();
+
+      if (!profileLookupError && !existingProfile) {
+        await supabase
+          .from('profiles')
+          .upsert({ id: authUser.id, email, nome }, { onConflict: 'id', ignoreDuplicates: true });
+      } else if (existingProfile && email && existingProfile.email !== email) {
+        await supabase.from('profiles').update({ email }).eq('id', authUser.id);
+      }
 
       // A global platform admin is provisioned server-side and does not need a
       // tenant created as a side effect of opening the admin dashboard.
-      const { data: isGlobalAdmin } = await supabase.rpc('is_platform_admin');
-      if (isGlobalAdmin === true) return;
+      const { data: isGlobalAdmin, error: globalAdminError } = await supabase.rpc('is_platform_admin');
+      if (globalAdminError || isGlobalAdmin === true) return;
 
       // Agency-only accounts should not receive an unrelated commercial tenant.
-      const { data: isMarketingMember, error: marketingMembershipError } = await supabase.rpc('is_marketing_member');
-      if (!marketingMembershipError && isMarketingMember === true) return;
+      const { data: marketingMember, error: marketingMembershipError } = await supabase.rpc('is_marketing_member');
+      if (marketingMembershipError || marketingMember === true) return;
 
-      const { data: memberships } = await supabase
+      // Never auto-provision a tenant when membership lookup fails or the user is a seller.
+      if (existingProfile?.role === 'vendedor') return;
+
+      const { data: memberships, error: membershipsError } = await supabase
         .from('empresa_members')
         .select('id')
         .eq('usuario_id', authUser.id)
         .eq('status', 'aceito')
         .limit(1);
 
-      if (memberships && memberships.length > 0) return;
+      if (membershipsError || (memberships && memberships.length > 0)) return;
+
+      const { data: vendorRecord, error: vendorError } = await supabase
+        .from('vendedores')
+        .select('id')
+        .eq('usuario_id', authUser.id)
+        .limit(1);
+
+      if (vendorError || (vendorRecord && vendorRecord.length > 0)) return;
 
       const empresaNome =
         (authUser.user_metadata?.empresa as string) ||
@@ -162,8 +191,83 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const runHydration = useCallback(
+    async (
+      session: {
+        user: {
+          id: string;
+          email?: string | null;
+          user_metadata?: Record<string, unknown>;
+        };
+        access_token: string;
+        expires_at?: number;
+      },
+      epoch: number
+    ): Promise<UserSession> => {
+      await ensureProfileAndEmpresa(session.user);
+
+      const [
+        { data: profile },
+        { data: isGlobalAdmin },
+        { data: marketingMember, error: marketingError },
+        loadedEmpresas,
+      ] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .maybeSingle(),
+        supabase.rpc('is_platform_admin'),
+        supabase.rpc('is_marketing_member'),
+        fetchUserCompanies(session.user.id),
+      ]);
+
+      const savedId = readSavedEmpresaId();
+      const activeEmpresa =
+        loadedEmpresas.find((empresa) => empresa.id === savedId) || loadedEmpresas[0] || null;
+      const isMarketing = !marketingError && marketingMember === true;
+      const fallbackRole =
+        isGlobalAdmin === true
+          ? 'admin'
+          : (profile?.role as UserSession['role'] | undefined) || 'operador';
+      const avatar = profile?.avatar_url
+        ? await criarLinkArquivo(profile.avatar_url, 60 * 60).catch(() => undefined)
+        : undefined;
+
+      const sessionUser: UserSession = {
+        id: session.user.id,
+        email: session.user.email || profile?.email || '',
+        nome: profile?.nome || displayNameFromUser(session.user),
+        avatar_url: profile?.avatar_url || null,
+        avatar,
+        // Application permissions follow the active tenant membership, while a
+        // platform admin defaults to 'admin' instead of falling back to 'vendedor'.
+        role: (activeEmpresa?.role || fallbackRole) as UserSession['role'],
+        empresa_id: activeEmpresa?.id || null,
+        empresas: loadedEmpresas.map(({ id, nome, role }) => ({
+          id,
+          nome,
+          role: role || 'vendedor',
+        })),
+        token: session.access_token,
+        expira_em: String(session.expires_at || ''),
+      };
+
+      if (mountedRef.current && epoch === authEpochRef.current) {
+        setEmpresas(loadedEmpresas);
+        setEmpresaAtiva(activeEmpresa);
+        writeSavedEmpresaId(activeEmpresa?.id || null);
+        setIsMarketingMember(isMarketing);
+        setUser(sessionUser);
+      }
+
+      return sessionUser;
+    },
+    [ensureProfileAndEmpresa, fetchUserCompanies]
+  );
+
   const hydrateFromSession = useCallback(
-    async (session: {
+    (session: {
       user: {
         id: string;
         email?: string | null;
@@ -172,50 +276,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       access_token: string;
       expires_at?: number;
     }) => {
-      await ensureProfileAndEmpresa(session.user);
-
-      const [{ data: profile }, { data: isGlobalAdmin }, loadedEmpresas] = await Promise.all([
-        supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .maybeSingle(),
-        supabase.rpc('is_platform_admin'),
-        loadUserCompanies(session.user.id),
-      ]);
-      const savedId = localStorage.getItem('empresaAtiva');
-      const activeEmpresa = loadedEmpresas.find((empresa) => empresa.id === savedId) || loadedEmpresas[0] || null;
-      const fallbackRole = isGlobalAdmin === true ? 'admin' : (profile?.role || 'vendedor');
-      const sessionUser: UserSession = {
-        id: session.user.id,
-        email: session.user.email || profile?.email || '',
-        nome: profile?.nome || displayNameFromUser(session.user),
-        avatar_url: profile?.avatar_url || null,
-        avatar: profile?.avatar_url
-          ? await criarLinkArquivo(profile.avatar_url, 60 * 60).catch(() => undefined)
-          : undefined,
-        // Application permissions follow the active tenant membership, while a
-        // platform admin defaults to 'admin' instead of falling back to 'vendedor'.
-        role: (activeEmpresa?.role || fallbackRole) as UserSession['role'],
-        empresa_id: activeEmpresa?.id || null,
-        empresas: loadedEmpresas.map(({ id, nome, role }) => ({ id, nome, role: role || 'vendedor' })),
-        token: session.access_token,
-        expira_em: String(session.expires_at || ''),
-      };
-      setUser(sessionUser);
+      const existing = hydrationInFlightRef.current;
+      if (existing && existing.userId === session.user.id) {
+        return existing.promise;
+      }
+      const epoch = authEpochRef.current;
+      const promise = runHydration(session, epoch).finally(() => {
+        if (hydrationInFlightRef.current?.promise === promise) {
+          hydrationInFlightRef.current = null;
+        }
+      });
+      hydrationInFlightRef.current = { userId: session.user.id, promise };
+      return promise;
     },
-    [ensureProfileAndEmpresa, loadUserCompanies]
+    [runHydration]
   );
 
   useEffect(() => {
-    let mounted = true;
+    mountedRef.current = true;
 
     async function init() {
       try {
         const {
           data: { session },
         } = await supabase.auth.getSession();
-        if (!mounted) return;
+        if (!mountedRef.current) return;
 
         if (session?.user) {
           await hydrateFromSession(session as any);
@@ -223,46 +308,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         console.warn('Erro ao restaurar sessao', err);
       } finally {
-        if (mounted) setIsLoading(false);
+        if (mountedRef.current) setIsLoading(false);
       }
     }
 
-    init();
+    void init();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return;
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mountedRef.current) return;
       if (event === 'SIGNED_OUT' || !session) {
+        authEpochRef.current += 1;
+        hydrationInFlightRef.current = null;
         setUser(null);
         setEmpresas([]);
         setEmpresaAtiva(null);
+        setIsMarketingMember(false);
         return;
       }
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
-        try {
-          await hydrateFromSession(session as any);
-        } catch (e) {
-          console.warn('hydrate auth', e);
-        }
+        // Defer outside Supabase's auth callback to avoid v2 lock contention.
+        window.setTimeout(() => {
+          if (!mountedRef.current) return;
+          void hydrateFromSession(session as any).catch((e) => {
+            console.warn('hydrate auth', e);
+          });
+        }, 0);
       }
     });
 
     return () => {
-      mounted = false;
+      mountedRef.current = false;
       subscription.unsubscribe();
     };
   }, [hydrateFromSession]);
 
   const login = useCallback(
-    async (email: string, password: string) => {
+    async (email: string, password: string): Promise<UserSession> => {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       if (error) throw new Error(`Falha ao autenticar: ${error.message}`);
       if (!data.session) throw new Error('Sessão não criada');
-      await hydrateFromSession(data.session as any);
+      return hydrateFromSession(data.session as any);
     },
     [hydrateFromSession]
   );
@@ -347,6 +437,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         expira_em: String(data.session?.expires_at || ''),
       };
 
+      setIsMarketingMember(false);
       setUser(session);
       if (novaEmpresa) {
         const emp: Empresa = {
@@ -357,18 +448,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         };
         setEmpresaAtiva(emp);
         setEmpresas([emp]);
-        localStorage.setItem('empresaAtiva', novaEmpresa.id);
+        writeSavedEmpresaId(novaEmpresa.id);
       }
     },
     []
   );
 
   const logout = useCallback(async () => {
+    authEpochRef.current += 1;
+    hydrationInFlightRef.current = null;
     await supabase.auth.signOut();
     setUser(null);
     setEmpresas([]);
     setEmpresaAtiva(null);
-    localStorage.removeItem('empresaAtiva');
+    setIsMarketingMember(false);
+    writeSavedEmpresaId(null);
   }, []);
 
   const switchEmpresa = useCallback(
@@ -378,38 +472,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setEmpresaAtiva(empresa);
         setUser((current) => current ? {
           ...current,
-          role: (empresa.role || 'vendedor') as UserSession['role'],
+          role: (empresa.role || 'operador') as UserSession['role'],
           empresa_id: empresa.id,
         } : current);
-        localStorage.setItem('empresaAtiva', empresaId);
+        writeSavedEmpresaId(empresaId);
       }
     },
     [empresas]
   );
 
   const refreshEmpresas = useCallback(async () => {
-    if (user) {
-      const loadedEmpresas = await loadUserCompanies(user.id);
-      const active = loadedEmpresas.find((empresa) => empresa.id === empresaAtiva?.id) || loadedEmpresas[0] || null;
-      if (active) {
-        setEmpresaAtiva(active);
-        setUser((current) => current ? {
-          ...current,
-          role: (active.role || 'vendedor') as UserSession['role'],
-          empresa_id: active.id,
-          empresas: loadedEmpresas.map(({ id, nome, role }) => ({ id, nome, role: role || 'vendedor' })),
-        } : current);
-      } else {
-        setEmpresaAtiva(null);
-        setUser((current) => current ? {
-          ...current,
-          role: current.role === 'admin' ? 'admin' : 'vendedor',
-          empresa_id: null,
-          empresas: [],
-        } : current);
-      }
+    if (!user) return;
+    const loadedEmpresas = await fetchUserCompanies(user.id);
+    const active =
+      loadedEmpresas.find((empresa) => empresa.id === empresaAtiva?.id) ||
+      loadedEmpresas.find((empresa) => empresa.id === readSavedEmpresaId()) ||
+      loadedEmpresas[0] ||
+      null;
+
+    setEmpresas(loadedEmpresas);
+    setEmpresaAtiva(active);
+    writeSavedEmpresaId(active?.id || null);
+
+    if (active) {
+      setUser((current) => current ? {
+        ...current,
+        role: (active.role || 'operador') as UserSession['role'],
+        empresa_id: active.id,
+        empresas: loadedEmpresas.map(({ id, nome, role }) => ({ id, nome, role: role || 'vendedor' })),
+      } : current);
+    } else {
+      setUser((current) => current ? {
+        ...current,
+        role: current.role === 'admin' ? 'admin' : 'operador',
+        empresa_id: null,
+        empresas: [],
+      } : current);
     }
-  }, [user, empresaAtiva, loadUserCompanies]);
+  }, [user, empresaAtiva?.id, fetchUserCompanies]);
 
   const updateProfile = useCallback(async (nome: string, avatarPath?: string | null) => {
     if (!user) throw new Error('Entre na sua conta para atualizar o perfil.');
@@ -445,8 +545,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const hasPermissionCb = useCallback(
     (permission: string) => {
       const role = empresaAtiva?.role || user?.role;
-      if (!role) return false;
-      return checkPermission(role as any, permission as any);
+      if (!role || !(role in ROLES)) return false;
+      return checkPermission(role as Role, permission as any);
     },
     [empresaAtiva?.role, user?.role]
   );
@@ -455,6 +555,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     empresas,
     empresaAtiva,
+    isMarketingMember,
     isAuthenticated: !!user,
     isLoading,
     login,

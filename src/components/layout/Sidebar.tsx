@@ -65,8 +65,8 @@ export function Sidebar({
           linkTo={false}
           compact={isCollapsed}
           centered={isCollapsed}
-          heightClass={isCollapsed ? 'h-10' : 'h-12 sm:h-14'}
-          className={cn('transition-all duration-normal', isCollapsed ? 'max-w-[44px]' : 'max-w-[200px] object-left')}
+          heightClass={isCollapsed ? 'h-9' : 'h-12 sm:h-14'}
+          className={cn('transition-all duration-normal', isCollapsed ? 'max-w-[48px]' : 'max-w-[200px] object-left')}
         />
         {!isCollapsed && !embedded && (
           <button
@@ -115,7 +115,7 @@ export function Sidebar({
               <span className={cn('shrink-0', item.prominent && 'text-white')}>{item.icon}</span>
               {!isCollapsed && <span className="truncate">{item.label}</span>}
               {!isCollapsed && item.badge && (
-                <span className="ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full bg-brand-surface text-brand-dark dark:text-brand-light">
+                <span className="ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full bg-brand-surface text-brand">
                   {item.badge}
                 </span>
               )}

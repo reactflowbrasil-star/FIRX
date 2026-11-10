@@ -1,6 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,6 +13,7 @@ import { AdminLayout } from '@/components/admin/AdminLayout';
 import { SonarGrid } from '@/components/ui/sonar-grid';
 import { FloatingThemeSwitcher } from '@/components/ui/FloatingThemeSwitcher';
 import { FirstVisitIntro } from '@/components/brand/FirstVisitIntro';
+import { LoadingCard } from '@/components/ui';
 import VendedorWorkspace from '@/pages/dashboard/VendedorWorkspace';
 import Visitas from '@/pages/dashboard/Visitas';
 import { GlobalFooter } from '@/components/layout/GlobalFooter';
@@ -162,17 +163,36 @@ function App() {
 }
 
 function WorkspaceRoleRoute() {
-  const { user, isLoading } = useAuth();
+  const { user, empresas, isMarketingMember, isLoading } = useAuth();
   const { isAdmin, isLoading: adminLoading } = useAdminAuth();
-  if (isLoading || adminLoading) return null;
+  const location = useLocation();
+  if (isLoading || adminLoading) {
+    return (
+      <div className="min-h-dvh flex items-center justify-center bg-transparent">
+        <LoadingCard message="Carregando..." />
+      </div>
+    );
+  }
   if (!isAdmin && user?.role === 'vendedor') return <Navigate to="/vendedor" replace />;
+  if (!isAdmin && isMarketingMember && empresas.length === 0 && location.pathname === '/dashboard') {
+    return <Navigate to="/marketing" replace />;
+  }
   return <Outlet />;
 }
 
 function SellerContractRoute() {
   const { user, empresaAtiva, isLoading } = useAuth();
-  if (isLoading) return null;
-  if (user?.role !== 'vendedor' && empresaAtiva?.role !== 'vendedor') return <Navigate to="/dashboard" replace />;
+  const { isAdmin, isLoading: adminLoading } = useAdminAuth();
+  if (isLoading || adminLoading) {
+    return (
+      <div className="min-h-dvh flex items-center justify-center bg-transparent">
+        <LoadingCard message="Carregando..." />
+      </div>
+    );
+  }
+  if (isAdmin || (user?.role !== 'vendedor' && empresaAtiva?.role !== 'vendedor')) {
+    return <Navigate to="/dashboard" replace />;
+  }
   return <ContratoNovo vendedorMode />;
 }
 

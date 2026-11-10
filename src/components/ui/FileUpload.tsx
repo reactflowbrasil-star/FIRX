@@ -27,10 +27,20 @@ export function FileUpload({
 }: FileUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<File[]>([]);
-  const [previews, setPreviews] = useState<string[]>([]);
+  const [previews, setPreviews] = useState<Array<string | null>>([]);
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
   const [savedFiles, setSavedFiles] = useState<ArquivoEnviado[]>([]);
+  const previewsRef = useRef<Array<string | null>>([]);
+  previewsRef.current = previews;
+
+  useEffect(() => {
+    return () => {
+      previewsRef.current.forEach((url) => {
+        if (url) URL.revokeObjectURL(url);
+      });
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -52,10 +62,16 @@ export function FileUpload({
       return;
     }
     const next = multiple ? [...files, ...arr] : arr.slice(0, 1);
+    if (!multiple) {
+      previews.forEach((url) => { if (url) URL.revokeObjectURL(url); });
+    }
+    const addedPreviews = (multiple ? arr : next).map((f) =>
+      f.type.startsWith('image/') ? URL.createObjectURL(f) : null
+    );
+    const nextPreviews = multiple ? [...previews, ...addedPreviews] : addedPreviews;
     setFiles(next);
+    setPreviews(nextPreviews);
     onChange?.(next);
-    const urls = next.filter((f) => f.type.startsWith('image/')).map((f) => URL.createObjectURL(f));
-    setPreviews(urls);
     setUploading(true);
     try {
       const results = await Promise.allSettled(arr.map((file) => uploadArquivo(file, categoria)));
@@ -77,8 +93,12 @@ export function FileUpload({
   };
 
   const remove = (i: number) => {
+    const removedUrl = previews[i];
+    if (removedUrl) URL.revokeObjectURL(removedUrl);
     const next = files.filter((_, idx) => idx !== i);
+    const nextPreviews = previews.filter((_, idx) => idx !== i);
     setFiles(next);
+    setPreviews(nextPreviews);
     onChange?.(next);
     if (!multiple) setSavedFiles([]);
   };
@@ -86,15 +106,25 @@ export function FileUpload({
   return (
     <div className={cn('space-y-3', className)}>
       <div
+        role="button"
+        tabIndex={0}
+        aria-label={label}
         onClick={() => inputRef.current?.click()}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            inputRef.current?.click();
+          }
+        }}
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
           e.preventDefault();
-          handleFiles(e.dataTransfer.files);
+          void handleFiles(e.dataTransfer.files);
         }}
         className={cn(
           'border-2 border-dashed border-border-color rounded-xl p-6 text-center cursor-pointer',
-          'hover:border-brand/50 hover:bg-brand/5 transition-colors'
+          'hover:border-brand/50 hover:bg-brand/5 transition-colors',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand'
         )}
       >
         <Upload className="w-8 h-8 mx-auto text-text-secondary mb-2" />
@@ -112,13 +142,13 @@ export function FileUpload({
           }}
         />
       </div>
-      {error && <p className="text-sm text-erro">{error}</p>}
+      {error && <p className="text-sm text-erro" role="alert">{error}</p>}
       {files.length > 0 && (
         <ul className="space-y-2">
           {files.map((f, i) => (
             <li key={`${f.name}-${i}`} className="flex items-center gap-3 p-2 rounded-lg bg-bg-secondary border border-border-color">
               {f.type.startsWith('image/') && previews[i] ? (
-                <img src={previews[i]} alt="" className="w-10 h-10 rounded object-cover" />
+                <img src={previews[i]!} alt="" className="w-10 h-10 rounded object-cover" />
               ) : f.type.startsWith('image/') ? (
                 <ImageIcon className="w-5 h-5 text-brand" />
               ) : (
@@ -131,7 +161,12 @@ export function FileUpload({
                   {savedFiles[i] && <> · <a className="text-brand hover:underline" href={savedFiles[i].url} target="_blank" rel="noreferrer">Salvo no servidor</a></>}
                 </p>
               </div>
-              <button type="button" onClick={() => remove(i)} className="p-1.5 rounded-lg hover:bg-bg-tertiary">
+              <button
+                type="button"
+                onClick={() => remove(i)}
+                aria-label={`Remover ${f.name}`}
+                className="p-1.5 rounded-lg text-text-secondary hover:bg-bg-tertiary hover:text-text-primary"
+              >
                 <X className="w-4 h-4" />
               </button>
             </li>

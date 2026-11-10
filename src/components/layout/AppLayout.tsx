@@ -11,6 +11,16 @@ import { getRecentDashboardActivity, subscribeToDashboardActivity } from '@/serv
 import { navItems } from '@/config/nav';
 import { LiveChat } from '@/components/chat/LiveChat';
 
+function readNotificationIds(storageKey: string): Set<string> {
+  try {
+    const raw = window.localStorage.getItem(storageKey);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : []);
+  } catch {
+    return new Set();
+  }
+}
+
 export function AppLayout() {
   const { user, logout, empresaAtiva } = useAuth();
   const { isAdmin } = useAdminAuth();
@@ -92,7 +102,7 @@ export function AppLayout() {
     if (!user) return;
     try {
       const activity = await getRecentDashboardActivity(empresaAtiva?.id || null, 8);
-      const readIds = new Set<string>(JSON.parse(localStorage.getItem(`growmoney-read-notifications:${user.id}`) || '[]'));
+      const readIds = readNotificationIds(`growmoney-read-notifications:${user.id}`);
       setNotifications(activity.map((item) => ({
         id: item.id,
         title: `${item.actorName} ${item.action === 'created' ? 'criou' : item.action === 'updated' ? 'alterou' : 'excluiu'} ${item.entity.replace(/[_-]+/g, ' ')}`,
@@ -143,9 +153,13 @@ export function AppLayout() {
     if (!user?.id) return;
     setNotifications((current) => {
       const storageKey = `growmoney-read-notifications:${user.id}`;
-      const readIds = new Set<string>(JSON.parse(localStorage.getItem(storageKey) || '[]'));
+      const readIds = readNotificationIds(storageKey);
       readIds.add(id);
-      localStorage.setItem(storageKey, JSON.stringify([...readIds].slice(-100)));
+      try {
+        window.localStorage.setItem(storageKey, JSON.stringify([...readIds].slice(-100)));
+      } catch {
+        // Ignore storage restrictions.
+      }
       return current.map((notification) => notification.id === id ? { ...notification, read: true } : notification);
     });
   };

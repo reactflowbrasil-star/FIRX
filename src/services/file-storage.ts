@@ -92,13 +92,13 @@ export async function excluirArquivo(caminho: string): Promise<void> {
 export async function listarArquivos(categoria: ArquivoCategoria): Promise<ArquivoEnviado[]> {
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) throw new Error('Entre na sua conta para acessar os arquivos.');
-  const query = supabase
+  let query = supabase
     .from('gm_files')
     .select('id, original_name, object_path, content_type, size_bytes')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false });
-  if (categoria !== 'auto') query.eq('categoria', categoria);
-  else query.in('categoria', ['fotos', 'arquivos', 'contratos']);
+  if (categoria !== 'auto') query = query.eq('categoria', categoria);
+  else query = query.in('categoria', ['fotos', 'arquivos', 'contratos']);
   const { data, error } = await query;
   if (error) throw new Error(`Não foi possível carregar os arquivos: ${error.message}`);
   return Promise.all((data as ArquivoRegistro[]).map(async (file) => {

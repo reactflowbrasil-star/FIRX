@@ -69,6 +69,7 @@ export class AdminUserService {
       body: { action: 'create', empresaId, email: email.trim(), nome: nome.trim(), metaMensal },
     });
     if (error) throw new Error(await edgeFunctionError(error, 'Falha ao criar usuário'));
+    if (data?.error) throw new Error(String(data.error));
     return {
       emailSent: data?.emailSent === true,
       message: typeof data?.message === 'string' ? data.message : 'Cadastro criado. O link de ativação foi enviado ao vendedor.',
@@ -77,8 +78,9 @@ export class AdminUserService {
 
   static async delete(empresaId: string, userId: string): Promise<void> {
     await requirePlatformAdmin();
-    const { error } = await supabase.functions.invoke('admin-users', { body: { action: 'delete', empresaId, userId } });
-    if (error) throw new Error(`Falha ao excluir usuário: ${error.message}`);
+    const { data, error } = await supabase.functions.invoke('admin-users', { body: { action: 'delete', empresaId, userId } });
+    if (error) throw new Error(await edgeFunctionError(error, 'Falha ao excluir usuário'));
+    if (data?.error) throw new Error(String(data.error));
   }
 
   private static async audit(adminUserId: string, action: string, details: Record<string, unknown>) {

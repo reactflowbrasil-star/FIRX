@@ -5,7 +5,7 @@ import { Button, Input, Card, PageHeader, Modal } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { calcularDescontoComercial, calcularItensContrato, gerarCronogramaParcelas, isValidCurrencyInput, mesesDaPeriodicidade, parseCurrencyInput } from '@/lib/contrato-calculo';
 import {
-  listServicosCatalogo,
+  listServicosAtivos,
   saveContrato,
   formatBRL,
   addMonths,
@@ -14,7 +14,7 @@ import {
   type ServicoCatalogo,
 } from '@/lib/contratos-store';
 import { useAuth } from '@/contexts/AuthContext';
-import { loadClientesEmpresa, saveClienteEmpresa } from '@/services/contrato-wizard-data';
+import { loadClientesEmpresa, loadServicosEmpresa, saveClienteEmpresa } from '@/services/contrato-wizard-data';
 import { createEnvelope, sendEnvelope } from '@/lib/assinatura-store';
 import { EMPRESA_CONTRATO, gerarContratoHtml } from '@/lib/contrato-template';
 
@@ -31,7 +31,8 @@ export default function ContratoNovo({ vendedorMode = false }: { vendedorMode?: 
   const [pendingSignature, setPendingSignature] = useState<{ envelopeId?: string; contract: ContratoLocal } | null>(null);
   const [clientes, setClientes] = useState<ClienteLocal[]>([]);
   const [loadingClientes, setLoadingClientes] = useState(false);
-  const servicos = useMemo(() => listServicosCatalogo(), []);
+  const [servicos, setServicos] = useState<ServicoCatalogo[]>(() => listServicosAtivos());
+  const [clienteModalError, setClienteModalError] = useState('');
 
   const [clientId, setClientId] = useState('');
   const [novoClienteOpen, setNovoClienteOpen] = useState(false);
@@ -63,13 +64,23 @@ export default function ContratoNovo({ vendedorMode = false }: { vendedorMode?: 
   const [error, setError] = useState('');
 
   const carregarClientes = useCallback(async () => {
-    if (!empresaAtiva?.id) return;
+    if (!empresaAtiva?.id) {
+      setClientes([]);
+      setServicos(listServicosAtivos());
+      return;
+    }
     setLoadingClientes(true);
     setError('');
     try {
       // The old browser-only client list had no company identifier. Import it
       // automatically only when the account has one company, avoiding cross-tenant data mixing.
-      setClientes(await loadClientesEmpresa(empresaAtiva.id, empresaAtiva.role, empresas.length === 1));
+      const [clientesEmpresa, servicosEmpresa] = await Promise.all([
+        loadClientesEmpresa(empresaAtiva.id, empresaAtiva.role, empresas.length === 1),
+        loadServicosEmpresa(empresaAtiva.id).catch(() => listServicosAtivos()),
+      ]);
+      setClientes(clientesEmpresa);
+      const ativos = servicosEmpresa.filter((item) => item.ativo);
+      setServicos(ativos.length ? ativos : listServicosAtivos());
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Não foi possível carregar os clientes da empresa.');
     } finally {
@@ -77,7 +88,15 @@ export default function ContratoNovo({ vendedorMode = false }: { vendedorMode?: 
     }
   }, [empresaAtiva?.id, empresaAtiva?.role, empresas.length]);
 
-  useEffect(() => { void carregarClientes(); }, [carregarClientes]);
+  useEffect(() => {
+    setClientId('');
+    setSelecionados([]);
+    setBonusIds([]);
+  }, [empresaAtiva?.id]);
+
+  useEffect(() => {
+    void carregarClientes();
+  }, [carregarClientes]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -162,8 +181,15 @@ export default function ContratoNovo({ vendedorMode = false }: { vendedorMode?: 
   };
 
   const salvarCliente = async () => {
-    if (!clienteForm.razao_social.trim() || !empresaAtiva?.id || !user?.id) return;
-    setError('');
+    if (!empresaAtiva?.id || !user?.id) {
+      setClienteModalError('Selecione uma empresa antes de cadastrar o cliente.');
+      return;
+    }
+    if (!clienteForm.razao_social.trim()) {
+      setClienteModalError('Informe a razão social ou nome do cliente.');
+      return;
+    }
+    setClienteModalError('');
     try {
       const c = await saveClienteEmpresa(empresaAtiva.id, user.id, { ...clienteForm, razao_social: clienteForm.razao_social.trim() });
       setClientes((current) => [c, ...current.filter((item) => item.id !== c.id)]);
@@ -171,7 +197,7 @@ export default function ContratoNovo({ vendedorMode = false }: { vendedorMode?: 
       setNovoClienteOpen(false);
       setClienteForm({ razao_social: '', documento: '', email: '', telefone: '', cidade: '', tipo: 'PJ' });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Não foi possível salvar o cliente.');
+      setClienteModalError(cause instanceof Error ? cause.message : 'Não foi possível salvar o cliente.');
     }
   };
 
@@ -384,7 +410,7 @@ export default function ContratoNovo({ vendedorMode = false }: { vendedorMode?: 
                 <Button type="button" variant="outline" leftIcon={<RefreshCw className="w-4 h-4" />} onClick={() => void carregarClientes()} disabled={!empresaAtiva?.id || loadingClientes}>
                   Atualizar
                 </Button>
-                <Button type="button" variant="outline" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setNovoClienteOpen(true)} disabled={!empresaAtiva?.id}>
+                <Button type="button" variant="outline" leftIcon={<Plus className="w-4 h-4" />} onClick={() => { setClienteModalError(''); setNovoClienteOpen(true); }} disabled={!empresaAtiva?.id}>
                   Novo cliente
                 </Button>
               </div>
@@ -764,6 +790,11 @@ export default function ContratoNovo({ vendedorMode = false }: { vendedorMode?: 
         }
       >
         <div className="grid gap-3 sm:grid-cols-2">
+          {clienteModalError && (
+            <div className="sm:col-span-2 rounded-lg border border-erro/40 bg-erro/10 px-3 py-2 text-sm text-erro" role="alert">
+              {clienteModalError}
+            </div>
+          )}
           <div className="sm:col-span-2">
             <Input
               label="Razão social / Nome"

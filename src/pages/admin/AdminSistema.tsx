@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Download, FileJson, Mail, PackageOpen, RefreshCw, Server, Upload } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AlertTriangle, Download, FileJson, Mail, PackageOpen, RefreshCw, Server, Upload } from 'lucide-react';
 import { Button, Card, Input, PageHeader, Badge } from '@/components/ui';
 import { BRAND } from '@/lib/brand';
 import { BrandLogo } from '@/components/brand/BrandLogo';
@@ -10,6 +10,9 @@ import { DEFAULT_EMAIL_TEMPLATES, EMAIL_BRAND_LOGO_ASSET, EMAIL_TEMPLATE_INFO, E
 
 type SmtpForm = Omit<SmtpSettings, 'passwordConfigured'> & { password: string };
 const emptySmtp: SmtpForm = { host: '', port: 587, secure: false, username: '', password: '', fromEmail: '', fromName: 'firx', enabled: false };
+const RESTORE_CONFIRMATION_TEXT = 'RESTAURAR E SUBSTITUIR DADOS';
+const CLEAR_CONFIRMATION_TEXT = 'APAGAR TODOS OS DADOS';
+const MAX_BACKUP_FILE_BYTES = 50_000_000;
 
 function escapePreviewHtml(value: string) {
   return value.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character] || character);
@@ -19,10 +22,21 @@ export default function AdminSistema() {
   const envOk = Boolean(import.meta.env.VITE_SUPABASE_URL);
   const migrationBase = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '') || '/';
   const migrationTarget = migrationBase === '/' ? 'public_html' : `public_html${migrationBase}`;
+  const backupInputRef = useRef<HTMLInputElement>(null);
   const [exporting, setExporting] = useState(false);
+  const [selectedBackupFileName, setSelectedBackupFileName] = useState('');
   const [preview, setPreview] = useState<{ name: string; result: ImportPreview; input: unknown } | null>(null);
   const [transferError, setTransferError] = useState('');
+  const [transferNotice, setTransferNotice] = useState('');
   const [transferBusy, setTransferBusy] = useState(false);
+  const [restoreConfirmOpen, setRestoreConfirmOpen] = useState(false);
+  const [restorePhrase, setRestorePhrase] = useState('');
+  const [restoreConfirmError, setRestoreConfirmError] = useState('');
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
+  const [clearPhrase, setClearPhrase] = useState('');
+  const [clearConfirmError, setClearConfirmError] = useState('');
+  const [clearError, setClearError] = useState('');
+  const [clearNotice, setClearNotice] = useState('');
   const [migrationBusy, setMigrationBusy] = useState(false);
   const [migrationProgress, setMigrationProgress] = useState('');
   const [migrationNotice, setMigrationNotice] = useState('');
@@ -236,6 +250,7 @@ export default function AdminSistema() {
   const downloadBackup = async () => {
     setExporting(true);
     setTransferError('');
+    setTransferNotice('');
     try {
       const backup = await AdminSystemBackupService.exportFullSystemBackup();
       const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json;charset=utf-8' });
@@ -244,7 +259,7 @@ export default function AdminSistema() {
       anchor.href = url;
       anchor.download = `growmoney-backup-${backup.createdAt.slice(0, 10)}.json`;
       anchor.click();
-      window.setTimeout(() => URL.revokeObjectURL(url), 0);
+      window.setTimeout(() => URL.revokeObjectURL(url), 5000);
     } catch (error) {
       setTransferError(error instanceof Error ? error.message : 'Não foi possível exportar os dados.');
     } finally {
@@ -265,7 +280,7 @@ export default function AdminSistema() {
       anchor.href = url;
       anchor.download = `growmoney-migracao-cpanel-${result.createdAt.slice(0, 10)}.zip`;
       anchor.click();
-      window.setTimeout(() => URL.revokeObjectURL(url), 0);
+      window.setTimeout(() => URL.revokeObjectURL(url), 5000);
       setMigrationNotice(`Pacote pronto com ${result.fileCount.toLocaleString('pt-BR')} arquivos. Consulte o README incluído antes de instalar.`);
     } catch (error) {
       setMigrationError(error instanceof Error ? error.message : 'Não foi possível gerar o pacote de migração.');
@@ -278,45 +293,117 @@ export default function AdminSistema() {
   const validateBackup = async (file?: File) => {
     setPreview(null);
     setTransferError('');
-    if (!file) return;
+    setTransferNotice('');
+    setRestoreConfirmOpen(false);
+    setRestorePhrase('');
+    setRestoreConfirmError('');
+    if (!file) {
+      setSelectedBackupFileName('');
+      return;
+    }
+    setSelectedBackupFileName(file.name);
+    if (file.size > MAX_BACKUP_FILE_BYTES) {
+      setTransferError(`O arquivo "${file.name}" excede o limite de ${MAX_BACKUP_FILE_BYTES / 1_000_000} MB.`);
+      return;
+    }
     try {
-      const input: unknown = JSON.parse(await file.text());
+      const rawText = await file.text();
+      let input: unknown;
+      try {
+        input = JSON.parse(rawText);
+      } catch {
+        throw new Error('O arquivo selecionado não contém um JSON válido.');
+      }
       setPreview({ name: file.name, result: AdminSystemBackupService.validateSystemBackup(input), input });
     } catch (error) {
       setTransferError(error instanceof Error ? error.message : 'Não foi possível ler o arquivo selecionado.');
     }
   };
 
-  const restoreBackup = async () => {
+  const openRestoreConfirmation = () => {
     if (!preview?.result.valid || !preview.result.canApply || transferBusy) return;
-    const confirmed = window.confirm('Atenção: a restauração substituirá em uma única transação os dados operacionais atuais. Esta ação não pode ser desfeita. Usuários, permissões administrativas, auditoria e configuração SMTP serão preservados.');
-    if (!confirmed) return;
-    const phrase = window.prompt('Para autorizar, digite exatamente: RESTAURAR E SUBSTITUIR DADOS');
-    if (phrase === null) return;
-    setTransferBusy(true); setTransferError('');
-    try {
-      const result = await AdminSystemBackupService.restoreSystemBackup(preview.input, phrase);
-      setPreview(null);
-      window.alert(`Restauração concluída: ${result.recordCount.toLocaleString('pt-BR')} registros importados.`);
-    } catch (error) {
-      setTransferError(error instanceof Error ? error.message : 'Não foi possível restaurar o backup. Nenhuma alteração parcial foi mantida.');
-    } finally { setTransferBusy(false); }
+    setTransferError('');
+    setTransferNotice('');
+    setRestorePhrase('');
+    setRestoreConfirmError('');
+    setRestoreConfirmOpen(true);
   };
 
-  const clearAllSystemData = async () => {
+  const cancelRestoreConfirmation = () => {
     if (transferBusy) return;
-    const confirmed = window.confirm('ATENÇÃO: esta ação é irreversível. Todos os cadastros e dados operacionais serão apagados. Usuários, logins, permissões administrativas, auditoria e SMTP serão preservados. Os binários de arquivos já armazenados também serão preservados.');
-    if (!confirmed) return;
-    const phrase = window.prompt('Para confirmar a exclusão, digite exatamente: APAGAR TODOS OS DADOS');
-    if (phrase === null) return;
-    setTransferBusy(true); setTransferError('');
+    setRestoreConfirmOpen(false);
+    setRestorePhrase('');
+    setRestoreConfirmError('');
+  };
+
+  const confirmRestoreBackup = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!preview?.result.valid || !preview.result.canApply || transferBusy) return;
+    if (restorePhrase !== RESTORE_CONFIRMATION_TEXT) {
+      setRestoreConfirmError(`Texto inválido. Digite exatamente "${RESTORE_CONFIRMATION_TEXT}" (em maiúsculas, sem espaços extras).`);
+      return;
+    }
+    setTransferBusy(true);
+    setTransferError('');
+    setRestoreConfirmError('');
+    setTransferNotice('');
     try {
-      const result = await AdminSystemBackupService.clearSystemData(phrase);
+      const result = await AdminSystemBackupService.restoreSystemBackup(preview.input, restorePhrase);
       setPreview(null);
-      window.alert(`Limpeza concluída. ${Object.values(result.deleted).reduce((sum, count) => sum + count, 0).toLocaleString('pt-BR')} registros operacionais removidos.`);
+      setSelectedBackupFileName('');
+      if (backupInputRef.current) backupInputRef.current.value = '';
+      setRestoreConfirmOpen(false);
+      setRestorePhrase('');
+      setTransferNotice(`Restauração concluída: ${result.recordCount.toLocaleString('pt-BR')} registros importados.`);
     } catch (error) {
-      setTransferError(error instanceof Error ? error.message : 'Não foi possível apagar os dados do sistema.');
-    } finally { setTransferBusy(false); }
+      setTransferError(error instanceof Error ? error.message : 'Não foi possível restaurar o backup. Nenhuma alteração parcial foi mantida.');
+    } finally {
+      setTransferBusy(false);
+    }
+  };
+
+  const openClearConfirmation = () => {
+    if (transferBusy) return;
+    setClearError('');
+    setClearNotice('');
+    setClearPhrase('');
+    setClearConfirmError('');
+    setClearConfirmOpen(true);
+  };
+
+  const cancelClearConfirmation = () => {
+    if (transferBusy) return;
+    setClearConfirmOpen(false);
+    setClearPhrase('');
+    setClearConfirmError('');
+  };
+
+  const confirmClearAllSystemData = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (transferBusy) return;
+    if (clearPhrase !== CLEAR_CONFIRMATION_TEXT) {
+      setClearConfirmError(`Texto inválido. Digite exatamente "${CLEAR_CONFIRMATION_TEXT}" (em maiúsculas, sem espaços extras).`);
+      return;
+    }
+    setTransferBusy(true);
+    setClearError('');
+    setClearConfirmError('');
+    setClearNotice('');
+    try {
+      const result = await AdminSystemBackupService.clearSystemData(clearPhrase);
+      setPreview(null);
+      setSelectedBackupFileName('');
+      if (backupInputRef.current) backupInputRef.current.value = '';
+      setRestoreConfirmOpen(false);
+      setClearConfirmOpen(false);
+      setClearPhrase('');
+      const totalDeleted = Object.values(result.deleted || {}).reduce((sum, count) => sum + Number(count || 0), 0);
+      setClearNotice(`Limpeza concluída. ${totalDeleted.toLocaleString('pt-BR')} registros operacionais removidos.`);
+    } catch (error) {
+      setClearError(error instanceof Error ? error.message : 'Não foi possível apagar os dados do sistema.');
+    } finally {
+      setTransferBusy(false);
+    }
   };
 
   return (
@@ -463,11 +550,38 @@ export default function AdminSistema() {
           <h2 className="font-semibold">Backup e importação</h2>
           <p className="mt-1 text-sm text-text-secondary">Exporte dados operacionais ou valide um backup e revise o conteúdo antes de qualquer importação.</p>
         </div>
-        <Button leftIcon={<Download className="h-4 w-4" />} loading={exporting} onClick={() => void downloadBackup()}>Exportar backup do sistema</Button>
+        <Button leftIcon={<Download className="h-4 w-4" />} loading={exporting} disabled={transferBusy} onClick={() => void downloadBackup()}>Exportar backup do sistema</Button>
         <div className="space-y-3 rounded-xl border border-border-color bg-bg-secondary/40 p-4">
           <div className="flex items-center gap-2"><FileJson className="h-4 w-4 text-brand" /><h3 className="text-sm font-semibold">Validar arquivo de backup</h3></div>
-          <label className="block text-sm font-medium" htmlFor="admin-backup-file">Arquivo JSON</label>
-          <input id="admin-backup-file" type="file" accept="application/json,.json" onChange={(event) => void validateBackup(event.target.files?.[0])} className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-brand/10 file:px-3 file:py-2 file:font-medium file:text-brand" />
+          <label className="block text-sm font-medium text-text-primary" htmlFor="admin-backup-file">Arquivo JSON</label>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <input
+              ref={backupInputRef}
+              id="admin-backup-file"
+              type="file"
+              accept="application/json,.json"
+              disabled={transferBusy}
+              onChange={(event) => {
+                const selected = event.target.files?.[0];
+                event.target.value = '';
+                void validateBackup(selected);
+              }}
+              className="peer sr-only"
+            />
+            <label
+              htmlFor="admin-backup-file"
+              className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-hover peer-focus-visible:ring-2 peer-focus-visible:ring-brand peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-bg-secondary ${transferBusy ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}
+            >
+              <Upload className="h-4 w-4" aria-hidden="true" />
+              Escolher arquivo
+            </label>
+            <span
+              className="min-w-0 flex-1 truncate rounded-xl border border-border-color bg-bg-primary px-3.5 py-2.5 text-sm text-text-primary"
+              title={selectedBackupFileName || 'Nenhum arquivo selecionado'}
+            >
+              {selectedBackupFileName || <span className="text-text-secondary">Nenhum arquivo selecionado</span>}
+            </span>
+          </div>
           {preview && <div className="space-y-3 rounded-lg border border-border-color bg-bg-primary p-3" role="status">
             <div className="flex flex-wrap items-center gap-2 text-sm font-semibold"><Upload className="h-4 w-4" />{preview.name}<Badge variant={preview.result.valid ? 'success' : 'danger'}>{preview.result.valid ? 'Válido' : 'Com erros'}</Badge></div>
             <p className="text-sm">{preview.result.recordCount.toLocaleString('pt-BR')} registros no total</p>
@@ -475,18 +589,103 @@ export default function AdminSistema() {
             {preview.result.errors.length > 0 && <div><p className="text-sm font-semibold text-erro">Erros de validação</p><ul className="mt-1 list-disc space-y-1 pl-5 text-xs text-erro">{preview.result.errors.map((error, index) => <li key={`${index}-${error}`}>{error}</li>)}</ul></div>}
             {preview.result.warnings.length > 0 && <div><p className="text-sm font-semibold">Avisos</p><ul className="mt-1 list-disc space-y-1 pl-5 text-xs text-text-secondary">{preview.result.warnings.map((warning, index) => <li key={`${index}-${warning}`}>{warning}</li>)}</ul></div>}
             <p className="rounded-lg bg-aviso/10 p-3 text-xs text-text-secondary">{preview.result.blockedReason}</p>
-            <Button disabled={!preview.result.canApply || transferBusy} loading={transferBusy} onClick={() => void restoreBackup()} title={preview.result.blockedReason}>{preview.result.canApply ? 'Importar e substituir dados' : 'Importação indisponível'}</Button>
+            {!restoreConfirmOpen ? (
+              <Button disabled={!preview.result.canApply || transferBusy} loading={transferBusy} onClick={openRestoreConfirmation} title={preview.result.blockedReason}>
+                {preview.result.canApply ? 'Importar e substituir dados' : 'Importação indisponível'}
+              </Button>
+            ) : (
+              <form onSubmit={(event) => void confirmRestoreBackup(event)} className="space-y-3 rounded-xl border border-aviso/50 bg-aviso/10 p-4">
+                <div className="flex items-start gap-2.5">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-aviso" aria-hidden="true" />
+                  <div className="space-y-1 text-xs text-text-primary">
+                    <p className="font-semibold">Confirmar restauração e substituição dos dados</p>
+                    <p className="text-text-secondary">
+                      A restauração substituirá em uma única transação os dados operacionais atuais. Usuários, permissões administrativas, auditoria, SMTP e arquivos binários do Storage serão preservados.
+                    </p>
+                    <p className="pt-1">
+                      Para autorizar, digite exatamente:{' '}
+                      <code className="select-all rounded bg-bg-primary px-1.5 py-0.5 font-mono font-semibold text-text-primary">{RESTORE_CONFIRMATION_TEXT}</code>
+                    </p>
+                  </div>
+                </div>
+                <Input
+                  id="admin-restore-confirmation"
+                  label="Texto de confirmação"
+                  placeholder={RESTORE_CONFIRMATION_TEXT}
+                  autoComplete="off"
+                  spellCheck={false}
+                  disabled={transferBusy}
+                  value={restorePhrase}
+                  onChange={(event) => {
+                    setRestorePhrase(event.target.value);
+                    if (restoreConfirmError) setRestoreConfirmError('');
+                  }}
+                  error={restoreConfirmError || undefined}
+                />
+                <div className="flex flex-wrap gap-2">
+                  <Button type="submit" variant="danger" loading={transferBusy} disabled={transferBusy}>
+                    Confirmar restauração
+                  </Button>
+                  <Button type="button" variant="outline" disabled={transferBusy} onClick={cancelRestoreConfirmation}>
+                    Cancelar
+                  </Button>
+                </div>
+              </form>
+            )}
           </div>}
         </div>
+        {transferNotice && <p className="rounded-lg border border-brand/30 bg-brand/10 p-3 text-sm text-text-primary" role="status">{transferNotice}</p>}
         {transferError && <p className="rounded-lg border border-erro/30 bg-erro/10 p-3 text-sm text-erro" role="alert">{transferError}</p>}
         <p className="text-xs text-text-secondary">O backup exclui identidades, memberships, convites, autorização administrativa, auditoria e históricos. Envelopes de assinatura e tokens privados também são excluídos. Os binários do Storage não são exportados; eles permanecem no mesmo ambiente durante a restauração. A prévia não grava dados.</p>
       </Card>
       <Card className="space-y-4 border border-erro/40 bg-erro/5 p-5">
         <div>
           <h2 className="font-semibold text-erro">Apagar dados operacionais</h2>
-          <p className="mt-1 text-sm text-text-secondary">Remove empresas, clientes, serviços, contratos, assinaturas, agenda e lançamentos financeiros. A limpeza é irreversível e exige confirmação em duas etapas.</p>
+          <p className="mt-1 text-sm text-text-secondary">Remove empresas, clientes, serviços, contratos, assinaturas, agenda e lançamentos financeiros. A limpeza é irreversível e exige confirmação explícita.</p>
         </div>
-        <Button variant="danger" disabled={transferBusy} loading={transferBusy} onClick={() => void clearAllSystemData()}>Apagar todos os dados do sistema</Button>
+        {!clearConfirmOpen ? (
+          <Button variant="danger" disabled={transferBusy} loading={transferBusy} onClick={openClearConfirmation}>Apagar todos os dados do sistema</Button>
+        ) : (
+          <form onSubmit={(event) => void confirmClearAllSystemData(event)} className="space-y-3 rounded-xl border border-erro/40 bg-bg-primary p-4">
+            <div className="flex items-start gap-2.5">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-erro" aria-hidden="true" />
+              <div className="space-y-1 text-xs text-text-primary">
+                <p className="font-semibold text-erro">Ação irreversível — confirmar exclusão total</p>
+                <p className="text-text-secondary">
+                  Todos os cadastros e dados operacionais serão apagados. Logins, perfis, permissões administrativas, auditoria, SMTP e binários já armazenados serão preservados.
+                </p>
+                <p className="pt-1">
+                  Para confirmar, digite exatamente:{' '}
+                  <code className="select-all rounded bg-bg-secondary px-1.5 py-0.5 font-mono font-semibold text-text-primary">{CLEAR_CONFIRMATION_TEXT}</code>
+                </p>
+              </div>
+            </div>
+            <Input
+              id="admin-clear-confirmation"
+              label="Texto de confirmação"
+              placeholder={CLEAR_CONFIRMATION_TEXT}
+              autoComplete="off"
+              spellCheck={false}
+              disabled={transferBusy}
+              value={clearPhrase}
+              onChange={(event) => {
+                setClearPhrase(event.target.value);
+                if (clearConfirmError) setClearConfirmError('');
+              }}
+              error={clearConfirmError || undefined}
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" variant="danger" loading={transferBusy} disabled={transferBusy}>
+                Confirmar exclusão definitiva
+              </Button>
+              <Button type="button" variant="outline" disabled={transferBusy} onClick={cancelClearConfirmation}>
+                Cancelar
+              </Button>
+            </div>
+          </form>
+        )}
+        {clearNotice && <p className="rounded-lg border border-brand/30 bg-brand/10 p-3 text-sm text-text-primary" role="status">{clearNotice}</p>}
+        {clearError && <p className="rounded-lg border border-erro/30 bg-erro/10 p-3 text-sm text-erro" role="alert">{clearError}</p>}
         <p className="text-xs text-text-secondary">Logins, perfis, permissões administrativas, auditoria, configuração SMTP e arquivos binários são preservados. Para remover logins ou arquivos, use seus módulos próprios.</p>
       </Card>
       <Card className="p-5 space-y-2 text-sm text-text-secondary">

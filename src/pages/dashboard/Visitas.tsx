@@ -51,6 +51,10 @@ export default function Visitas() {
     if (!client || !form.vendedorId || !form.date || !empresaAtiva?.id || !user?.id) {
       setError('Escolha um cliente, um vendedor e a data e hora da visita.'); return;
     }
+    const visitDate = new Date(`${form.date}T${form.hora || '09:00'}`);
+    if (Number.isNaN(visitDate.getTime())) {
+      setError('Informe uma data e hora válidas.'); return;
+    }
     setSaving(true); setError('');
     try {
       const address = { ...(client.endereco || {}), cep: client.endereco?.cep || client.cep };
@@ -59,7 +63,7 @@ export default function Visitas() {
         empresa_id: empresaAtiva.id, cliente_id: client.id, cliente_nome: client.nome,
         cliente_endereco: address, cliente_telefone: client.telefone, vendedor_id: form.vendedorId,
         titulo: form.titulo.trim() || 'Visita comercial', descricao: form.descricao.trim() || undefined,
-        data_hora: new Date(`${form.date}T${form.hora || '09:00'}`).toISOString(), criado_por: user.id,
+        data_hora: visitDate.toISOString(), criado_por: user.id,
       }, role);
       setOpen(false); setForm({ clienteId: '', vendedorId: '', titulo: 'Visita comercial', descricao: '', date: '', hora: '09:00' });
       await load();

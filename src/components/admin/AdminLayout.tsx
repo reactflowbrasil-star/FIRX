@@ -16,7 +16,7 @@ import {
   ArrowLeft,
   CircleUserRound,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { BRAND } from '@/lib/brand';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
@@ -41,6 +41,25 @@ export function AdminLayout() {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!profileOpen) return;
+    const handlePointerDown = (event: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setProfileOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setProfileOpen(false);
+    };
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [profileOpen]);
 
   const handleLogout = () => {
     setMenuOpen(false);
@@ -154,7 +173,7 @@ export function AdminLayout() {
               <ArrowLeft aria-hidden="true" className="h-5 w-5" />
               <span className="hidden text-xs font-semibold sm:inline">Voltar ao sistema</span>
             </Link>
-            <div className="relative">
+            <div ref={profileMenuRef} className="relative">
               <button
                 type="button"
                 aria-label="Perfil do administrador"

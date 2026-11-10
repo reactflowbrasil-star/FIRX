@@ -6,6 +6,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { EmpresaService } from '@/services/empresa-service';
 import { exportCsv, exportPdf } from '@/lib/export';
 
+const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (char) => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+}[char] || char));
+
 export default function Empresas() {
   const { empresas, user, refreshEmpresas } = useAuth();
   const [busca, setBusca] = useState('');
@@ -47,7 +51,7 @@ export default function Empresas() {
             <Button variant="outline" size="sm" leftIcon={<Download className="h-4 w-4" />} onClick={() => exportCsv('empresas', filtered.map((empresa) => ({ Nome: empresa.nome, CNPJ: empresa.cnpj || '' })))}>
               CSV
             </Button>
-            <Button variant="outline" size="sm" leftIcon={<FileText className="h-4 w-4" />} onClick={() => exportPdf('Empresas — firx', `<table><thead><tr><th>Nome</th><th>CNPJ</th></tr></thead><tbody>${filtered.map((empresa) => `<tr><td>${empresa.nome}</td><td>${empresa.cnpj || ''}</td></tr>`).join('')}</tbody></table>`)}>
+            <Button variant="outline" size="sm" leftIcon={<FileText className="h-4 w-4" />} onClick={() => exportPdf('Empresas — firx', `<table><thead><tr><th>Nome</th><th>CNPJ</th></tr></thead><tbody>${filtered.map((empresa) => `<tr><td>${escapeHtml(empresa.nome)}</td><td>${escapeHtml(empresa.cnpj || '')}</td></tr>`).join('')}</tbody></table>`)}>
               PDF
             </Button>
             <Button size="sm" leftIcon={<Plus className="h-4 w-4" />} onClick={() => setOpen(true)}>

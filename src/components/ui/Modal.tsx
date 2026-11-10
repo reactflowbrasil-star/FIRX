@@ -1,4 +1,4 @@
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -20,15 +20,25 @@ const sizeClasses: Record<NonNullable<ModalProps['size']>, string> = {
 };
 
 export function Modal({ open, onClose, title, children, size = 'md', footer }: ModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (!open) return;
+    const previousActive = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     const previousOverflow = document.body.style.overflow;
     document.addEventListener('keydown', onKey);
     document.body.style.overflow = 'hidden';
+
+    const dialog = dialogRef.current;
+    if (dialog && !dialog.contains(document.activeElement)) {
+      dialog.focus();
+    }
+
     return () => {
       document.removeEventListener('keydown', onKey);
       document.body.style.overflow = previousOverflow;
+      previousActive?.focus?.();
     };
   }, [open, onClose]);
 
@@ -39,12 +49,14 @@ export function Modal({ open, onClose, title, children, size = 'md', footer }: M
       <button
         type="button"
         aria-label="Fechar janela"
-        className="absolute inset-0 bg-grafite-dark/45 backdrop-blur-sm transition-opacity duration-normal"
+        className="absolute inset-0 bg-grafite-dark/65 backdrop-blur-sm transition-opacity duration-normal"
         onClick={onClose}
       />
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         className={cn(
-          'animate-modal relative flex min-h-0 w-full flex-col overflow-hidden border border-border-color bg-bg-primary shadow-xl',
+          'animate-modal relative flex min-h-0 w-full flex-col overflow-hidden border border-border-color bg-bg-primary shadow-xl focus:outline-none',
           'h-[100dvh] max-h-[100dvh] rounded-none sm:h-auto sm:max-h-[90dvh] sm:rounded-2xl',
           sizeClasses[size]
         )}

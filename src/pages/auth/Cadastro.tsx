@@ -4,6 +4,7 @@ import { Building2, User, Mail, Lock, FileText, BriefcaseBusiness, ArrowLeft, Ar
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { BRAND } from '@/lib/brand';
 import { GoogleButton } from '@/components/auth/GoogleButton';
 import { BrandLogo } from '@/components/brand/BrandLogo';
@@ -22,7 +23,8 @@ export default function Cadastro() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const { register, isAuthenticated, isLoading } = useAuth();
+  const { register, user, empresas, isMarketingMember, isAuthenticated, isLoading } = useAuth();
+  const { isAdmin, isLoading: adminLoading } = useAdminAuth();
   const navigate = useNavigate();
 
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
@@ -33,10 +35,17 @@ export default function Cadastro() {
   }, []);
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      navigate('/dashboard', { replace: true });
+    if (isLoading || adminLoading || !isAuthenticated) return;
+    if (!isAdmin && user?.role === 'vendedor') {
+      navigate('/vendedor', { replace: true });
+      return;
     }
-  }, [isAuthenticated, isLoading, navigate]);
+    if (!isAdmin && isMarketingMember && empresas.length === 0) {
+      navigate('/marketing', { replace: true });
+      return;
+    }
+    navigate('/dashboard', { replace: true });
+  }, [isAuthenticated, isLoading, adminLoading, isAdmin, user?.role, isMarketingMember, empresas.length, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -145,31 +154,41 @@ export default function Cadastro() {
           </div>
         </div>
 
-        <form className="auth-form grid grid-cols-2 gap-x-3 gap-y-2" onSubmit={handleSubmit}>
-          <div className="col-span-2"><Input label="Nome da empresa" value={form.empresa} onChange={(e) => set('empresa', e.target.value)} leftIcon={<Building2 className="w-4 h-4" />} required autoComplete="organization" /></div>
+        <form className="auth-form grid grid-cols-1 gap-x-3 gap-y-2 sm:grid-cols-2" onSubmit={handleSubmit}>
+          <div className="sm:col-span-2"><Input label="Nome da empresa" value={form.empresa} onChange={(e) => set('empresa', e.target.value)} leftIcon={<Building2 className="w-4 h-4" />} required autoComplete="organization" /></div>
           <Input label="CNPJ (opcional)" value={form.cnpj} onChange={(e) => set('cnpj', e.target.value)} leftIcon={<FileText className="w-4 h-4" />} />
           <Input label="Nome do administrador" value={form.admin} onChange={(e) => set('admin', e.target.value)} leftIcon={<User className="w-4 h-4" />} required autoComplete="name" />
-          <div className="col-span-2"><Input label="E-mail" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} leftIcon={<Mail className="w-4 h-4" />} required autoComplete="email" /></div>
+          <div className="sm:col-span-2"><Input label="E-mail" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} leftIcon={<Mail className="w-4 h-4" />} required autoComplete="email" /></div>
           <Input label="Senha" type="password" value={form.senha} onChange={(e) => set('senha', e.target.value)} leftIcon={<Lock className="w-4 h-4" />} required autoComplete="new-password" />
           <Input label="Confirmar senha" type="password" value={form.confirmar} onChange={(e) => set('confirmar', e.target.value)} leftIcon={<Lock className="w-4 h-4" />} required autoComplete="new-password" />
 
-          <label className="col-span-2 flex items-start gap-2 text-xs text-text-secondary">
+          <label className="sm:col-span-2 flex items-start gap-2 text-xs text-text-secondary">
             <input type="checkbox" checked={termos} onChange={(e) => setTermos(e.target.checked)} className="accent-brand mt-1" />
-            Aceito os termos de uso e política de privacidade
+            <span>
+              Aceito os{' '}
+              <Link to="/termos" className="font-medium text-brand hover:underline" target="_blank" rel="noopener noreferrer">
+                termos de uso
+              </Link>{' '}
+              e a{' '}
+              <Link to="/privacidade" className="font-medium text-brand hover:underline" target="_blank" rel="noopener noreferrer">
+                política de privacidade
+              </Link>
+              .
+            </span>
           </label>
 
           {error && (
-            <p className="col-span-2 text-sm text-erro bg-erro/10 rounded-lg px-3 py-2" role="alert">
+            <p className="sm:col-span-2 text-sm text-erro bg-erro/10 rounded-lg px-3 py-2" role="alert">
               {error}
             </p>
           )}
           {success && (
-            <p className="col-span-2 text-sm text-brand bg-brand/10 rounded-lg px-3 py-2" role="status">
+            <p className="sm:col-span-2 text-sm text-brand bg-brand/10 rounded-lg px-3 py-2" role="status">
               {success}
             </p>
           )}
 
-          <Button type="submit" className="col-span-2 w-full" loading={loading} disabled={loading}>
+          <Button type="submit" className="sm:col-span-2 w-full" loading={loading} disabled={loading}>
             Criar conta
           </Button>
         </form>

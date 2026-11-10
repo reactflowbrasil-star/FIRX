@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Eye, EyeOff, FolderOpen, Pencil, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
+import { Eye, EyeOff, FolderOpen, Pencil, Plus, RefreshCw, Search, Trash2, Upload } from 'lucide-react';
 import { Button, Card, EmptyState, Input, Modal, PageHeader } from '@/components/ui';
-import { AdminFileService, ADMIN_FILE_MAX_BYTES, type AdminFile } from '@/services/admin-file-service';
+import { ADMIN_FILE_CATEGORIES, AdminFileService, ADMIN_FILE_MAX_BYTES, type AdminFile } from '@/services/admin-file-service';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { AdminAccordionList } from '@/components/admin/AdminAccordionList';
 import { useAdminHiddenRecords } from '@/hooks/useAdminHiddenRecords';
@@ -15,12 +15,13 @@ export default function AdminArquivos() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<AdminFile | null>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [categoria, setCategoria] = useState('');
+  const [categoria, setCategoria] = useState<string>('arquivos');
   const [nome, setNome] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState('');
   const [error, setError] = useState('');
+  const [modalError, setModalError] = useState('');
   const { hiddenIds, hiddenCount, showHidden, setShowHidden, toggleHidden } = useAdminHiddenRecords('arquivos');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -38,16 +39,19 @@ export default function AdminArquivos() {
       && (!term || `${row.original_name} ${row.categoria} ${row.content_type}`.toLowerCase().includes(term)));
   }, [rows, search, showHidden, hiddenIds]);
 
-  const create = () => { setEditing(null); setFile(null); setCategoria(''); setNome(''); setError(''); setOpen(true); };
-  const edit = (row: AdminFile) => { setEditing(row); setFile(null); setCategoria(row.categoria); setNome(row.original_name); setError(''); setOpen(true); };
+  const create = () => {
+    setEditing(null); setFile(null); setCategoria('arquivos'); setNome(''); setModalError(''); setOpen(true);
+    if (inputRef.current) inputRef.current.value = '';
+  };
+  const edit = (row: AdminFile) => { setEditing(row); setFile(null); setCategoria(row.categoria); setNome(row.original_name); setModalError(''); setOpen(true); };
   const save = async (event: React.FormEvent) => {
-    event.preventDefault(); setSaving(true); setError('');
+    event.preventDefault(); setSaving(true); setModalError('');
     try {
       if (editing) await AdminFileService.update(editing.id, { categoria, original_name: nome });
       else if (file) await AdminFileService.upload(file, categoria);
       else throw new Error('Selecione um arquivo para enviar.');
       setOpen(false); await load();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Falha ao salvar arquivo.'); }
+    } catch (cause) { setModalError(cause instanceof Error ? cause.message : 'Falha ao salvar arquivo.'); }
     finally { setSaving(false); }
   };
   const download = async (row: AdminFile) => {
@@ -67,7 +71,7 @@ export default function AdminArquivos() {
   return (
     <div className="max-w-7xl space-y-4">
       <PageHeader title="Arquivos" description="Arquivos privados enviados à plataforma" actions={<div className="flex gap-2"><Button size="sm" variant="outline" leftIcon={<RefreshCw className="h-4 w-4" />} onClick={() => void load()}>Atualizar</Button>{isAdmin && <Button size="sm" leftIcon={<Plus className="h-4 w-4" />} onClick={create}>Enviar arquivo</Button>}</div>} />
-      {error && !open && <div className="rounded-xl border border-erro/30 bg-erro/10 p-4 text-sm text-erro" role="alert">{error}</div>}
+      {error && <div className="rounded-xl border border-erro/30 bg-erro/10 p-4 text-sm text-erro" role="alert">{error}</div>}
       <Card padding="none" className="overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-color p-4"><div className="relative w-full max-w-md"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary" /><Input aria-label="Buscar arquivos" placeholder="Buscar arquivo ou categoria..." value={search} onChange={(event) => setSearch(event.target.value)} className="pl-10" /></div><Button type="button" variant="outline" size="sm" onClick={() => setShowHidden((value) => !value)}>{showHidden ? 'Exibir itens ativos' : `Exibir ocultos (${hiddenCount})`}</Button><p className="w-full text-xs text-text-secondary">Ocultar afeta somente esta lista neste navegador; o arquivo permanece armazenado.</p></div>
         {loading ? <p className="p-8 text-center text-sm text-text-secondary">Carregando arquivos…</p> : filtered.length === 0 ? <div className="p-8"><EmptyState title="Nenhum arquivo" description="Arquivos enviados aparecerão aqui." icon={<FolderOpen className="h-6 w-6" />} /></div> : (
@@ -89,11 +93,38 @@ export default function AdminArquivos() {
           </>
         )}
       </Card>
-      {isAdmin && <Modal open={open} onClose={() => !saving && setOpen(false)} title={editing ? 'Editar arquivo' : 'Enviar arquivo'} footer={<><Button variant="outline" disabled={saving} onClick={() => setOpen(false)}>Cancelar</Button><Button form="admin-file-form" type="submit" loading={saving}>{editing ? 'Salvar alterações' : 'Enviar'}</Button></>}>
-        <form id="admin-file-form" onSubmit={save} className="space-y-4">{error && <div className="rounded-lg border border-erro/30 bg-erro/10 p-3 text-sm text-erro" role="alert">{error}</div>}
-          {!editing && <div><label htmlFor="admin-file-picker" className="mb-1.5 block text-sm font-medium">Arquivo</label><input ref={inputRef} id="admin-file-picker" type="file" required className="w-full rounded-xl border border-border-color bg-bg-secondary px-3 py-2 text-sm" onChange={(event) => setFile(event.target.files?.[0] || null)} /><p className="mt-1 text-xs text-text-secondary">Tamanho máximo: {formatSize(ADMIN_FILE_MAX_BYTES)}.</p>{file && file.size > ADMIN_FILE_MAX_BYTES && <p className="mt-1 text-sm text-erro">O arquivo excede o limite permitido.</p>}</div>}
+      {isAdmin && <Modal open={open} onClose={() => { if (!saving) { setOpen(false); setModalError(''); } }} title={editing ? 'Editar arquivo' : 'Enviar arquivo'} footer={<><Button variant="outline" disabled={saving} onClick={() => { setOpen(false); setModalError(''); }}>Cancelar</Button><Button form="admin-file-form" type="submit" loading={saving}>{editing ? 'Salvar alterações' : 'Enviar'}</Button></>}>
+        <form id="admin-file-form" onSubmit={save} className="space-y-4">{modalError && <div className="rounded-lg border border-erro/30 bg-erro/10 p-3 text-sm text-erro" role="alert">{modalError}</div>}
+          {!editing && <div>
+            <label htmlFor="admin-file-picker" className="mb-1.5 block text-sm font-medium">Arquivo</label>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <input ref={inputRef} id="admin-file-picker" type="file" className="peer sr-only" onChange={(event) => setFile(event.target.files?.[0] || null)} />
+              <label htmlFor="admin-file-picker" className="inline-flex min-h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-hover peer-focus-visible:ring-2 peer-focus-visible:ring-brand">
+                <Upload className="h-4 w-4" aria-hidden="true" />
+                Escolher arquivo
+              </label>
+              <span className="min-w-0 flex-1 truncate rounded-xl border border-border-color bg-bg-primary px-3 py-2.5 text-sm text-text-primary">
+                {file ? file.name : <span className="text-text-secondary">Nenhum arquivo selecionado</span>}
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-text-secondary">Tamanho máximo: {formatSize(ADMIN_FILE_MAX_BYTES)}.</p>
+            {file && file.size > ADMIN_FILE_MAX_BYTES && <p className="mt-1 text-sm text-erro">O arquivo excede o limite permitido.</p>}
+          </div>}
           <Input label="Nome do arquivo" required value={nome || (file && !editing ? file.name : '')} disabled={!editing} onChange={(event) => setNome(event.target.value)} />
-          <Input label="Categoria" required value={categoria} onChange={(event) => setCategoria(event.target.value)} />
+          <div>
+            <label htmlFor="admin-file-categoria" className="mb-1.5 block text-sm font-medium">Categoria</label>
+            <select
+              id="admin-file-categoria"
+              required
+              value={categoria}
+              onChange={(event) => setCategoria(event.target.value)}
+              className="w-full rounded-xl border border-border-color bg-bg-primary px-3 py-2.5 text-sm text-text-primary"
+            >
+              {ADMIN_FILE_CATEGORIES.map((item) => (
+                <option key={item} value={item}>{item}</option>
+              ))}
+            </select>
+          </div>
         </form>
       </Modal>}
     </div>

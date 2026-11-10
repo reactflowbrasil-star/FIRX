@@ -1,7 +1,11 @@
+import { useEffect, useState } from 'react';
 import { Building2, Users, FileText, Activity, ArrowRight, ShieldCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Card, PageHeader, Badge } from '@/components/ui';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
+import { supabase } from '@/lib/supabase/client';
+
+type PlatformCounts = { companies: number; users: number; contracts: number };
 
 const areas = [
   { label: 'Empresas', description: 'Cadastros, status e dados empresariais.', to: '/admin/empresas', icon: Building2 },
@@ -12,6 +16,38 @@ const areas = [
 
 export default function AdminDashboard() {
   const { session } = useAdminAuth();
+  const [counts, setCounts] = useState<PlatformCounts | null>(null);
+  const [countsLoading, setCountsLoading] = useState(true);
+  const [countsError, setCountsError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    setCountsLoading(true);
+    setCountsError('');
+    void (async () => {
+      try {
+        const { data, error } = await supabase.rpc('admin_dashboard_counts');
+        if (!active) return;
+        if (error) {
+          setCountsError(error.message);
+          return;
+        }
+        if (data && typeof data === 'object' && !Array.isArray(data)) {
+          const payload = data as Partial<PlatformCounts>;
+          setCounts({
+            companies: Number(payload.companies ?? 0),
+            users: Number(payload.users ?? 0),
+            contracts: Number(payload.contracts ?? 0),
+          });
+        }
+      } catch (cause) {
+        if (active) setCountsError(cause instanceof Error ? cause.message : 'Não foi possível carregar os indicadores.');
+      } finally {
+        if (active) setCountsLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, [session?.id]);
 
   return (
     <div className="max-w-6xl space-y-5 sm:space-y-6">
@@ -61,10 +97,29 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Card className="p-4 sm:p-5">
           <h2 className="font-semibold">Indicadores da plataforma</h2>
-          <div className="mt-3 flex items-start gap-3 rounded-lg bg-bg-secondary p-3">
-            <Activity aria-hidden="true" className="w-5 h-5 text-text-secondary mt-0.5 shrink-0" />
-            <p className="text-sm text-text-secondary">Os totais globais serão exibidos quando os dados estiverem disponíveis para esta sessão administrativa.</p>
-          </div>
+          {countsLoading ? (
+            <p className="mt-3 text-sm text-text-secondary">Carregando indicadores globais…</p>
+          ) : counts ? (
+            <dl className="mt-3 grid grid-cols-3 gap-2">
+              <div className="rounded-lg bg-bg-secondary p-3">
+                <dt className="text-xs text-text-secondary">Empresas</dt>
+                <dd className="mt-1 text-lg font-bold tabular-nums text-text-primary">{counts.companies.toLocaleString('pt-BR')}</dd>
+              </div>
+              <div className="rounded-lg bg-bg-secondary p-3">
+                <dt className="text-xs text-text-secondary">Usuários</dt>
+                <dd className="mt-1 text-lg font-bold tabular-nums text-text-primary">{counts.users.toLocaleString('pt-BR')}</dd>
+              </div>
+              <div className="rounded-lg bg-bg-secondary p-3">
+                <dt className="text-xs text-text-secondary">Contratos</dt>
+                <dd className="mt-1 text-lg font-bold tabular-nums text-text-primary">{counts.contracts.toLocaleString('pt-BR')}</dd>
+              </div>
+            </dl>
+          ) : (
+            <div className="mt-3 flex items-start gap-3 rounded-lg bg-bg-secondary p-3">
+              <Activity aria-hidden="true" className="w-5 h-5 text-text-secondary mt-0.5 shrink-0" />
+              <p className="text-sm text-text-secondary">{countsError || 'Os totais globais serão exibidos quando os dados estiverem disponíveis para esta sessão administrativa.'}</p>
+            </div>
+          )}
         </Card>
         <Card className="p-4 sm:p-5 space-y-3">
           <h2 className="font-semibold">Proteja sua conta</h2>

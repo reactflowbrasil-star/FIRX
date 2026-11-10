@@ -241,6 +241,24 @@ export function deleteServico(id: string) {
 
 type ContratoRemoto = { id: string; numero: number; empresa_id?: string | null; status: ContratoLocal['status']; payload: ContratoLocal; created_at: string };
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function getActiveCompanyId(): string | null {
+  if (typeof localStorage === 'undefined') return null;
+  const raw = localStorage.getItem('empresaAtiva')?.trim();
+  if (!raw || raw === 'null' || raw === 'undefined') return null;
+  return raw;
+}
+
+function isMissingEmpresaIdColumnError(error: { code?: string; message?: string } | null | undefined): boolean {
+  if (!error) return false;
+  if (error.code === '42703' || error.code === 'PGRST204') {
+    return !error.message || /empresa_id/i.test(error.message);
+  }
+  const message = error.message || '';
+  return /empresa_id/i.test(message) && /(does not exist|could not find|schema cache|column)/i.test(message);
+}
+
 async function currentUserId() {
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error || !user) throw new Error('Entre na sua conta para acessar os contratos.');
@@ -248,27 +266,60 @@ async function currentUserId() {
 }
 
 function fromRemote(row: ContratoRemoto): ContratoLocal {
-  return { ...row.payload, id: row.id, numero: row.numero, status: row.status, created_at: row.created_at };
+  const payload = (row.payload || {}) as Partial<ContratoLocal>;
+  const empresaId = row.empresa_id || payload.empresa_id || undefined;
+  return {
+    ...(payload as ContratoLocal),
+    ...(empresaId ? { empresa_id: empresaId } : {}),
+    itens: Array.isArray(payload.itens) ? payload.itens : [],
+    id: row.id,
+    numero: row.numero,
+    status: row.status,
+    created_at: row.created_at,
+  };
+}
+
+/**
+ * Browser-local contracts predate per-user persistence and have no reliable
+ * owner. Only company managers/admins may migrate that shared legacy bucket;
+ * otherwise the first seller to sign in could claim every contract on device.
+ */
+async function currentCompanyRole(empresaId: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc('empresa_role', { p_empresa_id: empresaId });
+  return error || typeof data !== 'string' ? null : data;
 }
 
 export async function listContratosRemotos(): Promise<ContratoLocal[]> {
   const userId = await currentUserId();
-  const empresaId = localStorage.getItem('empresaAtiva');
+  const empresaId = getActiveCompanyId();
   const { data: isPlatformAdmin, error: platformCheckError } = await supabase.rpc('is_platform_admin');
   if (platformCheckError) throw new Error(`Não foi possível validar o acesso administrativo: ${platformCheckError.message}`);
   const role = empresaId ? await currentCompanyRole(empresaId) : null;
+  const isCompanyManager = role === 'admin' || role === 'gestor';
+  const canImport = isPlatformAdmin === true || isCompanyManager;
+
   const legacy = read<ContratoLocal[]>(K_CONTRATOS, []);
-  if (legacy.length && await canImportLegacyContracts()) {
-    const rows = legacy.map((contrato) => ({
-      id: /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(contrato.id) ? contrato.id : crypto.randomUUID(),
-      user_id: userId,
-      empresa_id: isPlatformAdmin === true ? contrato.empresa_id || null : empresaId && (role === 'admin' || role === 'gestor') ? empresaId : null,
-      status: contrato.status,
-      payload: contrato,
-      created_at: contrato.created_at || new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }));
-    const { error } = await supabase.from('gm_contracts').upsert(rows, { onConflict: 'id', ignoreDuplicates: true });
+  if (legacy.length && canImport) {
+    const rows = legacy.map((contrato) => {
+      const resolvedEmpresaId = isPlatformAdmin === true ? contrato.empresa_id || null : empresaId || null;
+      return {
+        id: /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(contrato.id) ? contrato.id : crypto.randomUUID(),
+        user_id: userId,
+        empresa_id: resolvedEmpresaId,
+        status: contrato.status,
+        payload: {
+          ...contrato,
+          ...(resolvedEmpresaId ? { empresa_id: resolvedEmpresaId } : {}),
+        },
+        created_at: contrato.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+    });
+    let { error } = await supabase.from('gm_contracts').upsert(rows, { onConflict: 'id', ignoreDuplicates: true });
+    if (isMissingEmpresaIdColumnError(error)) {
+      const legacyRows = rows.map(({ empresa_id: _empresaId, ...rest }) => rest);
+      ({ error } = await supabase.from('gm_contracts').upsert(legacyRows, { onConflict: 'id', ignoreDuplicates: true }));
+    }
     if (error) throw new Error(`Não foi possível migrar os contratos locais para o servidor: ${error.message}`);
     localStorage.removeItem(K_CONTRATOS);
   }
@@ -277,60 +328,80 @@ export async function listContratosRemotos(): Promise<ContratoLocal[]> {
     .from('gm_contracts')
     .select('id, numero, empresa_id, status, payload, created_at');
   if (isPlatformAdmin !== true) {
-    if (empresaId && (role === 'admin' || role === 'gestor')) query = query.eq('empresa_id', empresaId);
-    else query = query.eq('user_id', userId);
+    if (empresaId && isCompanyManager) {
+      if (UUID_RE.test(empresaId) && typeof (query as { or?: unknown }).or === 'function') {
+        query = query.or(`empresa_id.eq.${empresaId},and(empresa_id.is.null,payload->>empresa_id.eq.${empresaId})`);
+      } else {
+        query = query.eq('empresa_id', empresaId);
+      }
+    } else {
+      query = query.eq('user_id', userId);
+    }
   }
-  const { data, error } = await query.order('numero', { ascending: false });
+  let { data, error } = await query.order('numero', { ascending: false });
+
+  if (isMissingEmpresaIdColumnError(error)) {
+    let fallbackQuery = supabase
+      .from('gm_contracts')
+      .select('id, numero, status, payload, created_at');
+    if (isPlatformAdmin !== true) {
+      fallbackQuery = fallbackQuery.eq('user_id', userId);
+    }
+    const fallbackResult = await fallbackQuery.order('numero', { ascending: false });
+    data = fallbackResult.data as typeof data;
+    error = fallbackResult.error;
+  }
+
   if (error) throw new Error(`Não foi possível carregar os contratos: ${error.message}`);
-  return ((data || []) as ContratoRemoto[]).map(fromRemote);
-}
-
-/**
- * Browser-local contracts predate per-user persistence and have no reliable
- * owner. Only company managers/admins may migrate that shared legacy bucket;
- * otherwise the first seller to sign in could claim every contract on device.
- */
-async function canImportLegacyContracts(): Promise<boolean> {
-  const { data: platformAdmin, error: platformAdminError } = await supabase.rpc('is_platform_admin');
-  if (!platformAdminError && platformAdmin === true) return true;
-
-  const empresaId = localStorage.getItem('empresaAtiva');
-  if (!empresaId) return false;
-  const role = await currentCompanyRole(empresaId);
-  return role === 'admin' || role === 'gestor';
-}
-
-async function currentCompanyRole(empresaId: string): Promise<string | null> {
-  const { data, error } = await supabase.rpc('empresa_role', { p_empresa_id: empresaId });
-  return error || typeof data !== 'string' ? null : data;
+  const mapped = ((data || []) as ContratoRemoto[]).map(fromRemote);
+  if (isPlatformAdmin !== true && empresaId) {
+    return mapped.filter((c) => !c.empresa_id || c.empresa_id === empresaId);
+  }
+  return mapped;
 }
 
 export async function saveContrato(
   c: Omit<ContratoLocal, 'id' | 'numero' | 'created_at'> & { empresa_id?: string; id?: string; numero?: number }
 ): Promise<ContratoLocal> {
   const userId = await currentUserId();
-  const empresaId = c.empresa_id || localStorage.getItem('empresaAtiva');
+  const empresaId = c.empresa_id?.trim() || getActiveCompanyId();
   if (!empresaId) throw new Error('Selecione uma empresa para criar o contrato.');
   const id = c.id || crypto.randomUUID();
   const item: ContratoLocal = {
     ...c,
+    empresa_id: empresaId,
     id,
     numero: c.numero || 0,
     created_at: new Date().toISOString(),
   };
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('gm_contracts')
-    .insert({ id, user_id: userId, empresa_id: empresaId, status: item.status, payload: { ...item, empresa_id: empresaId } })
+    .insert({ id, user_id: userId, empresa_id: empresaId, status: item.status, payload: item })
     .select('id, numero, empresa_id, status, payload, created_at')
     .single();
+  if (isMissingEmpresaIdColumnError(error)) {
+    const fallback = await supabase
+      .from('gm_contracts')
+      .insert({ id, user_id: userId, status: item.status, payload: item })
+      .select('id, numero, status, payload, created_at')
+      .single();
+    data = fallback.data as typeof data;
+    error = fallback.error;
+  }
   if (error) throw new Error(`Não foi possível salvar o contrato no servidor: ${error.message}`);
   return fromRemote(data as ContratoRemoto);
 }
 
 export async function updateContratoStatus(id: string, status: ContratoLocal['status']) {
   await currentUserId();
-  const { error } = await supabase.from('gm_contracts').update({ status, updated_at: new Date().toISOString() }).eq('id', id);
+  const { data, error } = await supabase
+    .from('gm_contracts')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select('id')
+    .maybeSingle();
   if (error) throw new Error(`Não foi possível atualizar o contrato: ${error.message}`);
+  if (!data) throw new Error('Contrato não encontrado ou sem permissão para alterá-lo.');
 }
 
 export async function updateContrato(
@@ -338,20 +409,57 @@ export async function updateContrato(
   changes: Partial<Omit<ContratoLocal, 'id' | 'numero' | 'created_at'>>
 ): Promise<ContratoLocal> {
   await currentUserId();
-  const { data: existing, error: readError } = await supabase
+  let hasEmpresaColumn = true;
+  let { data: existing, error: readError } = await supabase
     .from('gm_contracts')
     .select('payload,status,empresa_id')
     .eq('id', id)
     .maybeSingle();
+  if (isMissingEmpresaIdColumnError(readError)) {
+    hasEmpresaColumn = false;
+    const fallbackRead = await supabase
+      .from('gm_contracts')
+      .select('payload,status')
+      .eq('id', id)
+      .maybeSingle();
+    existing = fallbackRead.data ? { ...fallbackRead.data, empresa_id: null } : null;
+    readError = fallbackRead.error;
+  }
   if (readError) throw new Error(`Não foi possível carregar o contrato: ${readError.message}`);
   if (!existing) throw new Error('Contrato não encontrado ou sem permissão para alterá-lo.');
 
-  const payload = { ...(existing.payload as ContratoLocal), ...changes, empresa_id: existing.empresa_id || (existing.payload as ContratoLocal).empresa_id };
+  const existingPayload = (existing.payload || {}) as ContratoLocal;
+  const resolvedEmpresaId = existing.empresa_id || existingPayload.empresa_id || changes.empresa_id || undefined;
+  const payload: ContratoLocal = {
+    ...existingPayload,
+    ...changes,
+    ...(resolvedEmpresaId ? { empresa_id: resolvedEmpresaId } : {}),
+  };
+
+  if (hasEmpresaColumn) {
+    const patch: Record<string, unknown> = {
+      payload,
+      status: payload.status,
+      updated_at: new Date().toISOString(),
+    };
+    if (!existing.empresa_id && resolvedEmpresaId) {
+      patch.empresa_id = resolvedEmpresaId;
+    }
+    const { data, error } = await supabase
+      .from('gm_contracts')
+      .update(patch)
+      .eq('id', id)
+      .select('id, numero, empresa_id, status, payload, created_at')
+      .single();
+    if (error) throw new Error(`Não foi possível atualizar o contrato: ${error.message}`);
+    return fromRemote(data as ContratoRemoto);
+  }
+
   const { data, error } = await supabase
     .from('gm_contracts')
     .update({ payload, status: payload.status, updated_at: new Date().toISOString() })
     .eq('id', id)
-    .select('id, numero, empresa_id, status, payload, created_at')
+    .select('id, numero, status, payload, created_at')
     .single();
   if (error) throw new Error(`Não foi possível atualizar o contrato: ${error.message}`);
   return fromRemote(data as ContratoRemoto);
@@ -359,8 +467,9 @@ export async function updateContrato(
 
 export async function deleteContrato(id: string) {
   await currentUserId();
-  const { error } = await supabase.from('gm_contracts').delete().eq('id', id);
+  const { data, error } = await supabase.from('gm_contracts').delete().eq('id', id).select('id');
   if (error) throw new Error(`Não foi possível excluir o contrato: ${error.message}`);
+  if (!data?.length) throw new Error('Contrato não encontrado ou sem permissão para excluí-lo.');
 }
 
 export function formatBRL(n: number) {

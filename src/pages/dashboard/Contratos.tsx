@@ -18,6 +18,10 @@ import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { gerarContratoHtml } from '@/lib/contrato-template';
 
+const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (char) => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+}[char] || char));
+
 export default function Contratos() {
   const { isAdmin: isPlatformAdmin } = useAdminAuth();
   const { empresaAtiva } = useAuth();
@@ -47,7 +51,7 @@ export default function Contratos() {
     }
   }, []);
 
-  useEffect(() => { void reload(); }, [reload, criado]);
+  useEffect(() => { void reload(); }, [reload, criado, empresaAtiva?.id]);
 
   const filtered = useMemo(
     () =>
@@ -80,9 +84,10 @@ export default function Contratos() {
     const centavos = Math.round(Math.max(0, total - entrada) * 100);
     const parcela = Math.floor(centavos / quantidade) / 100;
     const ultima = (centavos - parcela * 100 * (quantidade - 1)) / 100;
-    const valorSemBeneficios = editing.valor_sem_beneficios ?? (editing.valor_bruto + editing.bonus_total);
+    const valorSemBeneficios = editing.valor_sem_beneficios ?? (Number(editing.valor_bruto || 0) + Number(editing.bonus_total || 0));
+    const valorBruto = Number(editing.valor_bruto || 0);
     const economiaTotal = Math.max(0, valorSemBeneficios - total);
-    const descontoValor = Math.max(0, editing.valor_bruto - total);
+    const descontoValor = Math.max(0, valorBruto - total);
     try {
       await updateContrato(editing.id, {
       cliente_nome: String(form.get('cliente_nome') || '').trim(),
@@ -93,7 +98,7 @@ export default function Contratos() {
       valor_parcela: parcela,
       valor_ultima_parcela: ultima,
       desconto_valor: descontoValor,
-      desconto_percentual: editing.valor_bruto > 0 ? descontoValor / editing.valor_bruto * 100 : 0,
+      desconto_percentual: valorBruto > 0 ? descontoValor / valorBruto * 100 : 0,
       valor_sem_beneficios: valorSemBeneficios,
       economia_total: economiaTotal,
       data_inicio: String(form.get('data_inicio') || ''),
@@ -173,9 +178,9 @@ export default function Contratos() {
                   `<table><thead><tr><th>Nº</th><th>Cliente</th><th>Valor</th><th>Parcelas</th><th>Status</th></tr></thead><tbody>${filtered
                     .map(
                       (r) =>
-                        `<tr><td>CT-${String(r.numero).padStart(4, '0')}</td><td>${r.cliente_nome}</td><td>${formatBRL(
+                        `<tr><td>CT-${String(r.numero).padStart(4, '0')}</td><td>${escapeHtml(r.cliente_nome)}</td><td>${formatBRL(
                           r.valor
-                        )}</td><td>${r.parcelas}x ${formatBRL(r.valor_parcela)}${r.valor_ultima_parcela && r.valor_ultima_parcela !== r.valor_parcela ? ` (última ${formatBRL(r.valor_ultima_parcela)})` : ''}</td><td>${r.status}</td></tr>`
+                        )}</td><td>${r.parcelas}x ${formatBRL(r.valor_parcela)}${r.valor_ultima_parcela && r.valor_ultima_parcela !== r.valor_parcela ? ` (última ${formatBRL(r.valor_ultima_parcela)})` : ''}</td><td>${escapeHtml(r.status)}</td></tr>`
                     )
                     .join('')}</tbody></table>`
                 )
@@ -246,14 +251,14 @@ export default function Contratos() {
               <Button variant="outline" size="sm" leftIcon={<Eye className="h-4 w-4" />} onClick={() => setViewing(r)}>Visualizar</Button>
               <Button variant="outline" size="sm" leftIcon={<MessageCircle className="h-4 w-4" />} onClick={() => compartilharWhatsApp(r)}>WhatsApp</Button>
               <Button variant="ghost" size="sm" leftIcon={<EyeOff className="h-4 w-4" />} onClick={() => toggleHidden(r.id)}>{showHidden ? 'Reexibir' : 'Ocultar'}</Button>
-              {canManage && <>{canEdit && <Button variant="outline" size="sm" leftIcon={<Pencil className="h-4 w-4" />} onClick={() => { setEditing(r); setEditError(''); }}>Editar</Button>}<Button variant="outline" size="sm" leftIcon={<Check className="h-4 w-4" />} onClick={() => void runAction(() => updateContrato(r.id, { pagamento_status: r.pagamento_status === 'pago' ? 'pendente' : 'pago' }))}>{r.pagamento_status === 'pago' ? 'Marcar pendente' : 'Marcar pago'}</Button><Button variant="outline" size="sm" leftIcon={<Send className="h-4 w-4" />} onClick={() => void runAction(() => updateContratoStatus(r.id, 'enviado'))}>Enviar</Button><Button variant="outline" size="sm" onClick={() => void runAction(() => updateContratoStatus(r.id, 'assinado'))}>Marcar assinado</Button><Button variant="ghost" size="sm" leftIcon={<Trash2 className="h-4 w-4 text-erro" />} onClick={() => void runAction(() => deleteContrato(r.id))}>Excluir</Button></>}
+              {canManage && <>{canEdit && <Button variant="outline" size="sm" leftIcon={<Pencil className="h-4 w-4" />} onClick={() => { setEditing(r); setEditError(''); }}>Editar</Button>}<Button variant="outline" size="sm" leftIcon={<Check className="h-4 w-4" />} onClick={() => void runAction(() => updateContrato(r.id, { pagamento_status: r.pagamento_status === 'pago' ? 'pendente' : 'pago' }))}>{r.pagamento_status === 'pago' ? 'Marcar pendente' : 'Marcar pago'}</Button><Button variant="outline" size="sm" leftIcon={<Send className="h-4 w-4" />} onClick={() => void runAction(() => updateContratoStatus(r.id, 'enviado'))}>Enviar</Button><Button variant="outline" size="sm" onClick={() => void runAction(() => updateContratoStatus(r.id, 'assinado'))}>Marcar assinado</Button><Button variant="ghost" size="sm" leftIcon={<Trash2 className="h-4 w-4 text-erro" />} onClick={() => { if (window.confirm(`Excluir o contrato CT-${String(r.numero).padStart(4, '0')}?`)) void runAction(() => deleteContrato(r.id)); }}>Excluir</Button></>}
             </>,
           }))} />
         )}
       </Card>
 
       {canManage && <Modal open={!!editing} onClose={() => setEditing(null)} title="Editar contrato" size="lg">
-        {editing && <form onSubmit={saveEdit} className="space-y-4">
+        {editing && <form key={editing.id} onSubmit={saveEdit} className="space-y-4">
           {editError && <p className="text-sm text-erro" role="alert">{editError}</p>}
           <div className="grid gap-3 sm:grid-cols-2">
             <Input name="cliente_nome" label="Cliente" defaultValue={editing.cliente_nome} required />
