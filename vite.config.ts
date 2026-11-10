@@ -35,6 +35,27 @@ function cpanelMigrationManifest(base: string): Plugin {
   };
 }
 
+function subpathRedirectPlugin(base: string): Plugin {
+  const trimmedBase = base.replace(/\/+$/, '');
+  return {
+    name: 'subpath-trailing-slash-redirect',
+    configurePreviewServer(server) {
+      if (!trimmedBase) return;
+      server.middlewares.use((req, res, next) => {
+        const url = req.url ?? '';
+        const [pathname, search] = url.split('?');
+        if (pathname === trimmedBase) {
+          res.statusCode = 301;
+          res.setHeader('Location', `${trimmedBase}/${search ? `?${search}` : ''}`);
+          res.end();
+          return;
+        }
+        next();
+      });
+    },
+  };
+}
+
 export default defineConfig(({ command, mode }) => {
   // Para cPanel / subpasta em https://agenciaafrica.com.br/firx:
   //   VITE_BASE=/firx/ (padrão em build de produção)
@@ -44,7 +65,7 @@ export default defineConfig(({ command, mode }) => {
 
   return {
     base,
-    plugins: [react(), cpanelMigrationManifest(base)],
+    plugins: [react(), cpanelMigrationManifest(base), subpathRedirectPlugin(base)],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, 'src'),
