@@ -54,6 +54,10 @@ export default defineConfig(({ command, mode }) => {
     port: 3000,
     host: '0.0.0.0',
   },
+  preview: {
+    // Dokploy forwards the public Host header to `vite preview`; allow only our domain.
+    allowedHosts: ['agenciaafrica.com.br'],
+  },
   build: {
     outDir: 'dist',
     // Avoid shipping browser-readable source maps to the public static host.
