@@ -58,7 +58,7 @@ export function AdminLayout() {
     <>
       <div className="h-20 px-5 flex items-center border-b border-border-color shrink-0">
         <Link to="/admin" onClick={closeMenu} className="flex flex-col gap-0.5">
-          <BrandLogo linkTo={false} heightClass="h-11" className="max-w-[180px]" />
+          <BrandLogo linkTo={false} heightClass="h-12" className="max-w-[180px]" />
           <span className="text-[10px] uppercase tracking-widest text-brand font-semibold">
             Painel Admin
           </span>

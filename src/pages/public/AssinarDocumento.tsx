@@ -139,7 +139,7 @@ export default function AssinarDocumento() {
     <div className="min-h-screen bg-transparent">
       <header className="border-b border-border-color bg-bg-primary/90 backdrop-blur sticky top-0 z-20">
         <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
-          <BrandLogo linkTo={false} heightClass="h-10" className="max-w-[140px]" />
+          <BrandLogo linkTo={false} heightClass="h-11 sm:h-12" className="max-w-[180px]" />
           <Badge variant="info">Assinatura segura</Badge>
         </div>
       </header>

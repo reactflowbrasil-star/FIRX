@@ -148,7 +148,7 @@ export default function VendedorWorkspace() {
     <main className="vendor-shell min-h-dvh bg-bg-secondary text-text-primary">
       <header className="sticky top-0 z-20 border-b border-border-color bg-bg-primary/95 px-4 py-3 backdrop-blur sm:px-6">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
-          <BrandLogo linkTo={false} heightClass="h-10" className="max-w-[140px]" />
+          <BrandLogo linkTo={false} heightClass="h-11 sm:h-12" className="max-w-[180px]" />
           <div className="flex items-center gap-3">
             {user?.avatar && <img src={user.avatar} alt="Foto do perfil" className="h-9 w-9 rounded-full border border-border-color object-cover" />}
             <span className="hidden text-sm text-text-secondary sm:block">Olá, {user?.nome}</span>

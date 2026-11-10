@@ -325,7 +325,7 @@ export default function AdminSistema() {
       <Card className="p-5 space-y-4">
         <h2 className="font-semibold">Identidade</h2>
         <div className="flex flex-col xs:flex-row xs:items-center gap-3 sm:gap-4">
-          <BrandLogo linkTo={false} heightClass="h-14" className="max-w-[180px] self-start" />
+          <BrandLogo linkTo={false} heightClass="h-14 sm:h-16" className="max-w-[200px] self-start" />
           <div className="text-sm min-w-0 break-words">
             <p className="font-medium">{BRAND.name}</p>
             <p className="text-text-secondary">{BRAND.product}</p>

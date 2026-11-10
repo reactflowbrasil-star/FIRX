@@ -92,8 +92,8 @@ export default function Cadastro() {
   return (
     <main className="auth-screen w-full flex items-center justify-center bg-transparent overflow-x-clip px-3 py-[max(.5rem,env(safe-area-inset-top))] pb-[max(.5rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-3">
       <div className="auth-card w-full max-w-xl bg-bg-primary border border-border-color rounded-2xl p-4 sm:p-6 shadow-lg">
-        <div className="auth-brand text-center mb-4 space-y-2">
-          <BrandLogo linkTo={false} heightClass="h-auto max-h-[min(10svh,60px)]" className="auth-logo mx-auto w-auto max-w-[min(100%,210px)]" />
+        <div className="auth-brand flex flex-col items-center text-center mb-4 space-y-2">
+          <BrandLogo linkTo={false} centered heightClass="h-16 sm:h-[72px]" className="auth-logo mx-auto max-w-[min(100%,240px)]" />
           <h1 className="text-xl font-bold text-text-primary">Criar conta</h1>
           <p className="text-sm text-text-secondary">{perfil ? 'Perfil selecionado' : 'Escolha seu perfil para continuar'} · {BRAND.name}</p>
         </div>

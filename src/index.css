@@ -103,7 +103,7 @@ body.auth-layout-active [role='group'][aria-label='Seletor de tema'] { display: 
 
 @media (max-height: 700px) {
   .auth-card { padding-block: 0.625rem !important; }
-  .auth-logo { max-height: 52px !important; }
+  .auth-logo { max-height: 60px !important; }
   .auth-brand { margin-bottom: 0.375rem !important; }
   .auth-divider { margin-block: 0.25rem !important; }
   .auth-form { row-gap: 0.375rem !important; }
@@ -120,7 +120,7 @@ body.auth-layout-active [role='group'][aria-label='Seletor de tema'] { display: 
 
 @media (max-height: 600px) {
   .auth-brand > p { display: none; }
-  .auth-logo { max-height: 44px !important; }
+  .auth-logo { max-height: 52px !important; }
   .auth-form { row-gap: 0.3rem !important; }
   .auth-form input { padding-block: 0.375rem; font-size: 16px; }
   .auth-card { padding: 0.625rem 0.875rem !important; }

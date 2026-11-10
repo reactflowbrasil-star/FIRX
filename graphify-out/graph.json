@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "generator": "growmoney-project-graph",
-  "generated_at": "2026-11-10T22:36:27.256Z",
+  "generated_at": "2026-11-10T22:54:46.188Z",
   "scope": "src, supabase, docs, public source and static assets, project configuration",
   "nodes": [
     {
@@ -1055,14 +1055,49 @@
       "label": "public/assets/canal360-logo.png"
     },
     {
+      "id": "asset:public/assets/favicon.png",
+      "type": "static-asset",
+      "label": "public/assets/favicon.png"
+    },
+    {
       "id": "asset:public/assets/grow-logo-black.png",
       "type": "static-asset",
       "label": "public/assets/grow-logo-black.png"
     },
     {
+      "id": "asset:public/assets/logo-firx-icon-white.png",
+      "type": "static-asset",
+      "label": "public/assets/logo-firx-icon-white.png"
+    },
+    {
+      "id": "asset:public/assets/logo-firx-icon.png",
+      "type": "static-asset",
+      "label": "public/assets/logo-firx-icon.png"
+    },
+    {
+      "id": "asset:public/assets/logo-firx-wordmark-white.png",
+      "type": "static-asset",
+      "label": "public/assets/logo-firx-wordmark-white.png"
+    },
+    {
+      "id": "asset:public/assets/logo-firx-wordmark.png",
+      "type": "static-asset",
+      "label": "public/assets/logo-firx-wordmark.png"
+    },
+    {
       "id": "asset:public/assets/logo.png",
       "type": "static-asset",
       "label": "public/assets/logo.png"
+    },
+    {
+      "id": "asset:public/assets/pwa-icon-192.png",
+      "type": "static-asset",
+      "label": "public/assets/pwa-icon-192.png"
+    },
+    {
+      "id": "asset:public/assets/pwa-icon-512.png",
+      "type": "static-asset",
+      "label": "public/assets/pwa-icon-512.png"
     },
     {
       "id": "asset:public/sw.js",

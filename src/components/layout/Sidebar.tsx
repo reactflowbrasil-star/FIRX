@@ -64,8 +64,9 @@ export function Sidebar({
         <BrandLogo
           linkTo={false}
           compact={isCollapsed}
-          heightClass={isCollapsed ? 'h-10 w-10' : 'h-11'}
-          className={cn('transition-all duration-normal', isCollapsed ? 'max-w-10' : 'max-w-[180px] object-left')}
+          centered={isCollapsed}
+          heightClass={isCollapsed ? 'h-10' : 'h-12 sm:h-14'}
+          className={cn('transition-all duration-normal', isCollapsed ? 'max-w-[44px]' : 'max-w-[200px] object-left')}
         />
         {!isCollapsed && !embedded && (
           <button

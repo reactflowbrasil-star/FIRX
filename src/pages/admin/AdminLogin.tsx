@@ -34,8 +34,8 @@ export default function AdminLogin() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-bg-secondary p-4">
       <Card className="w-full max-w-md p-6 md:p-8">
-        <div className="text-center mb-8 space-y-3">
-          <BrandLogo linkTo={false} heightClass="h-[96px] md:h-[120px]" className="max-w-[360px] mx-auto" />
+        <div className="flex flex-col items-center text-center mb-8 space-y-3">
+          <BrandLogo linkTo={false} centered heightClass="h-[72px] sm:h-20" className="max-w-[260px] mx-auto" />
           <div>
             <p className="text-xs uppercase tracking-widest text-brand font-semibold">Painel Admin</p>
             <p className="text-sm text-text-secondary mt-1">

@@ -56,7 +56,7 @@ export function Header({
       </button>
 
       <Link to="/dashboard" className="flex items-center shrink-0 md:hidden" aria-label={BRAND.name}>
-        <BrandLogo linkTo={false} heightClass="h-9" className="max-w-[min(32vw,132px)]" />
+        <BrandLogo linkTo={false} heightClass="h-11" className="max-w-[min(42vw,160px)]" />
       </Link>
 
       <div className="flex-1 max-w-md mx-auto hidden sm:block">
