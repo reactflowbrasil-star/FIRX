@@ -53,10 +53,14 @@ export default defineConfig(({ command, mode }) => {
   server: {
     port: 3000,
     host: '0.0.0.0',
+    allowedHosts: true,
   },
   preview: {
-    // Dokploy forwards the public Host header to `vite preview`; allow only our domain.
-    allowedHosts: ['agenciaafrica.com.br'],
+    port: 3000,
+    host: '0.0.0.0',
+    // Dokploy/Traefik encaminha o header Host público para `vite preview`.
+    // `true` desativa a checagem de host, evitando 403 em qualquer domínio/proxy.
+    allowedHosts: true,
   },
   build: {
     outDir: 'dist',
