@@ -10,6 +10,7 @@ export const BRAND = {
   logoIcon: `${import.meta.env.BASE_URL}assets/logo-firx-icon.png`,
   logoIconDark: `${import.meta.env.BASE_URL}assets/logo-firx-icon-white.png`,
   site: 'https://agenciaafrica.com.br/firx',
+  whatsappNumber: (import.meta.env.VITE_WHATSAPP_NUMBER || '').replace(/\D/g, ''),
   colors: {
     primary: '#820AD1',
     primaryHover: '#490B75',
@@ -21,3 +22,11 @@ export const BRAND = {
     background: '#F4F4F4',
   },
 } as const;
+
+export function getBrandWhatsAppUrl(message: string): string {
+  const encoded = encodeURIComponent(message);
+  if (BRAND.whatsappNumber) {
+    return `https://wa.me/${BRAND.whatsappNumber}?text=${encoded}`;
+  }
+  return `https://api.whatsapp.com/send?text=${encoded}`;
+}
